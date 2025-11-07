@@ -1,12 +1,14 @@
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.Extensions.Configuration;
+using static Fido2NetLib.Objects.COSE;
 
 namespace PwaWeb.Services;
 
+// Read more here: https://github.com/passwordless-lib/fido2-net-lib
 public class WebAuthnService
 {
-    private readonly Fido2 _lib;
+    private readonly IFido2 _fido2;
     private readonly string _origin;
     private readonly string _serverDomain;
     private readonly string _serverName;
@@ -14,23 +16,14 @@ public class WebAuthnService
     // production: replace in-memory with persistent DB-backed store
     private readonly Dictionary<string, List<StoredCredential>> _store = new();
 
-    public WebAuthnService(IConfigurationSection config)
+    public WebAuthnService(IFido2 fido2)
     {
-        _serverDomain = config.GetValue<string>("ServerDomain") ?? "example.com";
-        _serverName = config.GetValue<string>("ServerName") ?? "MauiPwaSample";
-        _origin = config.GetValue<string>("Origin") ?? "https://example.com";
-
-        var fidoCfg = new Fido2Configuration
-        {
-            ServerDomain = _serverDomain,
-            ServerName = _serverName,
-            Origin = _origin
-        };
-        _lib = new Fido2(fidoCfg);
+        _fido2 = fido2;
     }
 
     public CredentialCreateOptions GenerateCredentialOptions(string username, string displayName, out byte[] userId)
     {
+        // TODO: store test user here.
         userId = System.Text.Encoding.UTF8.GetBytes(username);
         var user = new Fido2User
         {
@@ -38,14 +31,27 @@ public class WebAuthnService
             Name = username,
             Id = userId
         };
-        var pubKeyCredParams = new[] { new PubKeyCredParam(Algorithm.ES256) };
-        var options = _lib.RequestNewCredential(user, pubKeyCredParams, authenticatorSelection: null, attestation: AttestationConveyancePreference.None);
+
+        _store.TryGetValue(username, out var creds);
+        var existingKeys = creds?.Select(c => c.Descriptor).ToList() ?? new List<PublicKeyCredentialDescriptor>();        
+        var options = _fido2.RequestNewCredential(new RequestNewCredentialParams
+        {
+            User = user,
+            ExcludeCredentials = existingKeys,
+            AuthenticatorSelection = AuthenticatorSelection.Default,
+            AttestationPreference = AttestationConveyancePreference.None,
+            Extensions = new AuthenticationExtensionsClientInputs
+            {
+                CredProps = true  // Enable credential properties extension
+            }
+        });
+        
         return options;
     }
 
-    public async Task<Fido2NetLib.AttestationVerificationSuccess> MakeCredentialAsync(AuthenticatorAttestationRawResponse attestationResponse, CredentialCreateOptions options)
+    public async Task<AttestationVerificationSuccess> MakeCredentialAsync(AuthenticatorAttestationRawResponse attestationResponse, CredentialCreateOptions options)
     {
-        var result = await _lib.MakeNewCredentialAsync(attestationResponse, options, async (args) => true);
+        var result = await _fido2.MakeNewCredentialAsync(attestationResponse, options, async (args) => true);
         var cred = new StoredCredential
         {
             Descriptor = result.Result.CredentialDescriptor,
@@ -66,7 +72,16 @@ public class WebAuthnService
     {
         _store.TryGetValue(username, out var creds);
         var allowed = creds?.Select(c => c.Descriptor).ToList() ?? new List<PublicKeyCredentialDescriptor>();
-        var options = _lib.GetAssertionOptions(allowed, UserVerificationRequirement.Discouraged);
+        var options = _fido2.GetAssertionOptions(new GetAssertionOptionsParams
+        {
+            AllowedCredentials = allowed,
+            UserVerification = UserVerificationRequirement.Discouraged,
+            Extensions = new AuthenticationExtensionsClientInputs
+            {
+                Extensions = true
+            }
+        });
+
         return options;
     }
 
@@ -74,7 +89,7 @@ public class WebAuthnService
     {
         _store.TryGetValue(username, out var creds);
         var stored = creds ?? new List<StoredCredential>();
-        var storedPubKeys = stored.Select(c => new StoredPublicKeyCredential
+        var storedPubKeys = stored.Select(c => new StoredCredential
         {
             Descriptor = c.Descriptor,
             PublicKey = c.PublicKey,
@@ -82,8 +97,21 @@ public class WebAuthnService
             SignatureCounter = c.SignatureCounter
         }).ToList();
 
-        var res = await _lib.MakeAssertionAsync(assertionResponse, options, storedPubKeys, async (args) => true);
-        return res != null;
+        IsUserHandleOwnerOfCredentialIdAsync callback = async (args) =>
+        {
+            return true;
+        };
+
+        var result = await _fido2.MakeAssertionAsync(new MakeAssertionParams
+        {
+            AssertionResponse = assertionResponse,
+            OriginalOptions = options,
+            StoredPublicKey = stored[0].PublicKey,
+            StoredSignatureCounter = stored[0].SignatureCounter,
+            IsUserHandleOwnerOfCredentialIdCallback = callback
+        });
+        
+        return result != null;
     }
 }
 

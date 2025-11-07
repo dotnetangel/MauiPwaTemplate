@@ -4,12 +4,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+var fidoSection = builder.Configuration.GetSection("Fido2");
 var vapidSection = builder.Configuration.GetSection("VapidKeys");
 var publicKey = vapidSection.GetValue<string>("PublicKey") ?? string.Empty;
 var privateKey = vapidSection.GetValue<string>("PrivateKey") ?? string.Empty;
 
 builder.Services.AddSingleton(new WebPushService(publicKey, privateKey));
 builder.Services.AddSingleton(new WebAuthnService(builder.Configuration.GetSection("Fido2")));
+builder.Services.AddFido2(options =>
+{
+    options.ServerDomain = fidoSection.GetValue<string>("ServerDomain") ?? "example.com";
+    options.ServerName = fidoSection.GetValue<string>("ServerName") ?? "MauiPwaSample";
+    options.Origins = new HashSet<string> { fidoSection.GetValue<string>("Origin") ?? "https://example.com" };
+});
 
 var app = builder.Build();
 app.UseDefaultFiles();
