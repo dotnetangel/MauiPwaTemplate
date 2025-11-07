@@ -1,1 +1,7 @@
-{ "name": "Sample PWA", "short_name": "PWA", "start_url": "/", "display": "standalone", "background_color": "#ffffff" }
+{
+    "name": "Sample PWA",
+    "short_name": "PWA",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff"
+}

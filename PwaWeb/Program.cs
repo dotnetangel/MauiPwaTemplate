@@ -1,5 +1,4 @@
 using Lib.Net.Http.WebPush;
-using PwaWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
