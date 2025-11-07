@@ -1,4 +1,3 @@
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Mvc;
 using PwaWeb.Services;
 

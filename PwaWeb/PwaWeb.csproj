@@ -6,6 +6,5 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Net.Http.WebPush" Version="6.0.0" />
-    <PackageReference Include="Fido2NetLib" Version="1.11.0" />
   </ItemGroup>
 </Project>
