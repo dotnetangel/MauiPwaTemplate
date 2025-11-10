@@ -1,1 +1,10 @@
-namespace MauiPwaShell; public partial class App : Application { public App() { InitializeComponent(); MainPage = new MainPage(); } }
+namespace MauiPwaShell;
+
+public partial class App : Application
+{
+    public App()
+    {
+        InitializeComponent();
+        MainPage = new MainPage();
+    }
+}

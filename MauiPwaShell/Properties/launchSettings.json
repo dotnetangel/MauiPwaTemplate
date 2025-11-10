@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Windows Machine": {
+      "commandName": "MsixPackage"
+    },
+    "Android Emulator": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}
