@@ -39,7 +39,7 @@ builder.Services.AddSingleton<WebPushService>(sp =>
 
 // Configure FIDO2/WebAuthn Service
 var fidoSection = builder.Configuration.GetSection("Fido2");
-builder.Services.AddSingleton<WebAuthnService>();
+builder.Services.AddScoped<WebAuthnService>();
 builder.Services.AddFido2(options =>
 {
     options.ServerDomain = fidoSection.GetValue<string>("ServerDomain") ?? "localhost";
