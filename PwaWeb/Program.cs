@@ -21,10 +21,14 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add HttpClient for WebPush
+builder.Services.AddHttpClient("WebPush");
+
 // Configure Web Push Service
 var vapidSection = builder.Configuration.GetSection("VapidKeys");
 var publicKey = vapidSection.GetValue<string>("PublicKey") ?? string.Empty;
 var privateKey = vapidSection.GetValue<string>("PrivateKey") ?? string.Empty;
+var subject = vapidSection.GetValue<string>("Subject") ?? "mailto:admin@example.com";
 
 if (string.IsNullOrEmpty(publicKey) || string.IsNullOrEmpty(privateKey))
 {
@@ -35,7 +39,12 @@ if (string.IsNullOrEmpty(publicKey) || string.IsNullOrEmpty(privateKey))
 }
 
 builder.Services.AddSingleton<WebPushService>(sp => 
-    new WebPushService(publicKey, privateKey, sp.GetRequiredService<ILogger<WebPushService>>()));
+    new WebPushService(
+        sp.GetRequiredService<IHttpClientFactory>(),
+        publicKey, 
+        privateKey, 
+        subject,
+        sp.GetRequiredService<ILogger<WebPushService>>()));
 
 // Configure FIDO2/WebAuthn Service
 var fidoSection = builder.Configuration.GetSection("Fido2");

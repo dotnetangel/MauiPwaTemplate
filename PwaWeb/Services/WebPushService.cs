@@ -9,15 +9,17 @@ public class WebPushService
     private readonly PushServiceClient _client;
     private readonly string _publicKey;
     private readonly string _privateKey;
+    private readonly string _subject;
     private readonly ConcurrentBag<PushSubscription> _subscriptions = new();
     private readonly ILogger<WebPushService> _logger;
 
-    public WebPushService(string publicKey, string privateKey, ILogger<WebPushService> logger)
+    public WebPushService(IHttpClientFactory httpClientFactory, string publicKey, string privateKey, string subject, ILogger<WebPushService> logger)
     {
         _publicKey = publicKey;
         _privateKey = privateKey;
+        _subject = subject;
         _logger = logger;
-        _client = new PushServiceClient(new HttpClient());
+        _client = new PushServiceClient(httpClientFactory.CreateClient("WebPush"));
     }
 
     public string PublicKey => _publicKey;
@@ -57,9 +59,9 @@ public class WebPushService
                     Urgency = PushMessageUrgency.Normal
                 };
 
-                var vapidAuth = new Lib.Net.Http.WebPush.Authentication.VapidAuthentication(_publicKey, _privateKey)
+                using var vapidAuth = new Lib.Net.Http.WebPush.Authentication.VapidAuthentication(_publicKey, _privateKey)
                 {
-                    Subject = "mailto:admin@example.com"
+                    Subject = _subject
                 };
 
                 await _client.RequestPushMessageDeliveryAsync(sub, message, vapidAuth);

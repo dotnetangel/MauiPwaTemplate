@@ -171,7 +171,7 @@ document.getElementById('registerPasskey').addEventListener('click', async () =>
         }
         
         logPasskey('Creating credential...');
-        const attestation = await navigator.credentials.create(options);
+        const attestation = await navigator.credentials.create({ publicKey: options.publicKey });
         
         if (!attestation) {
             throw new Error('Failed to create credential');
@@ -245,7 +245,7 @@ document.getElementById('loginPasskey').addEventListener('click', async () => {
         }
         
         logPasskey('Requesting authentication...');
-        const assertion = await navigator.credentials.get(options);
+        const assertion = await navigator.credentials.get({ publicKey: options.publicKey });
         
         if (!assertion) {
             throw new Error('Failed to get credential');
