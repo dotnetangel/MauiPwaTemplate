@@ -20,10 +20,11 @@ A sample .NET 8 solution demonstrating:
 - NuGet: `Lib.Net.Http.WebPush` is used for server-side push delivery.
 
 ### MauiPwaShell
-- .NET MAUI app that:
+- Minimal .NET 8 MAUI app (thin shell) that:
   - Hosts the PWA in a `WebView`.
-  - Initializes Firebase Cloud Messaging via `Plugin.Firebase.CloudMessaging`.
+  - Initializes Firebase Cloud Messaging via `Plugin.Firebase`.
   - Retrieves FCM token, posts it to backend, injects it into the web app via JavaScript.
+  - Provides app store deployment capability for the PWA.
 
 ---
 
