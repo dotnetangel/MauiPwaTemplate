@@ -1,7 +1,48 @@
 {
-    "name": "Sample PWA",
-    "short_name": "PWA",
+    "name": "PWA Sample - Push & Passkeys",
+    "short_name": "PWA Sample",
+    "description": "Sample Progressive Web App demonstrating Web Push notifications and Passkey authentication",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#ffffff"
+    "background_color": "#ffffff",
+    "theme_color": "#4CAF50",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["utilities", "productivity"],
+    "screenshots": [
+        {
+            "src": "/screenshot-1.png",
+            "sizes": "540x720",
+            "type": "image/png"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Register Push",
+            "short_name": "Register",
+            "description": "Register for push notifications",
+            "url": "/#push",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "related_applications": [],
+    "prefer_related_applications": false
 }

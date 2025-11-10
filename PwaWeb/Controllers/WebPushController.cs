@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PwaWeb.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace PwaWeb.Controllers;
 
@@ -8,18 +9,40 @@ namespace PwaWeb.Controllers;
 public class WebPushController : ControllerBase
 {
     private readonly WebPushService _pushService;
+    private readonly ILogger<WebPushController> _logger;
 
-    public WebPushController(WebPushService pushService)
+    public WebPushController(WebPushService pushService, ILogger<WebPushController> logger)
     {
         _pushService = pushService;
+        _logger = logger;
     }
 
     [HttpPost("send")]
-    public async Task<IActionResult> Send([FromBody] PushMessage msg)
+    public async Task<IActionResult> Send([FromBody] PushMessage? msg)
     {
-        await _pushService.SendNotificationAsync(msg.Title, msg.Body);
-        return Ok(new { sent = true });
+        try
+        {
+            if (msg == null || string.IsNullOrWhiteSpace(msg.Title))
+            {
+                _logger.LogWarning("Received invalid push message");
+                return BadRequest(new { error = "Invalid message data. Title is required." });
+            }
+
+            // Sanitize title for logging to prevent log injection
+            var sanitizedTitle = System.Text.RegularExpressions.Regex.Replace(msg.Title, @"[\r\n]", "");
+            
+            await _pushService.SendNotificationAsync(msg.Title, msg.Body ?? string.Empty);
+            _logger.LogInformation("Push notification sent: {Title}", sanitizedTitle);
+            return Ok(new { sent = true, message = "Notification sent successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending push notification");
+            return StatusCode(500, new { error = "Failed to send notification" });
+        }
     }
 }
 
-public record PushMessage(string Title, string Body);
+public record PushMessage(
+    [Required] string Title, 
+    string? Body = null);

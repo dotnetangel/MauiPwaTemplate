@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.Extensions.Configuration;
@@ -9,16 +10,15 @@ namespace PwaWeb.Services;
 public class WebAuthnService
 {
     private readonly IFido2 _fido2;
-    private readonly string _origin;
-    private readonly string _serverDomain;
-    private readonly string _serverName;
+    private readonly ILogger<WebAuthnService> _logger;
 
-    // production: replace in-memory with persistent DB-backed store
-    private readonly Dictionary<string, List<StoredCredential>> _store = new();
+    // Static store shared across all instances (production: replace with persistent DB-backed store)
+    private static readonly ConcurrentDictionary<string, List<StoredCredential>> _store = new();
 
-    public WebAuthnService(IFido2 fido2)
+    public WebAuthnService(IFido2 fido2, ILogger<WebAuthnService> logger)
     {
         _fido2 = fido2;
+        _logger = logger;
     }
 
     public CredentialCreateOptions GenerateCredentialOptions(string username, string displayName, out byte[] userId)
@@ -49,23 +49,48 @@ public class WebAuthnService
         return options;
     }
 
-    public async Task<AttestationVerificationSuccess> MakeCredentialAsync(AuthenticatorAttestationRawResponse attestationResponse, CredentialCreateOptions options)
+    public async Task<bool> MakeCredentialAsync(AuthenticatorAttestationRawResponse attestationResponse, CredentialCreateOptions options)
     {
-        var result = await _fido2.MakeNewCredentialAsync(attestationResponse, options, async (args) => true);
-        var cred = new StoredCredential
+        try
         {
-            Descriptor = result.Result.CredentialDescriptor,
-            PublicKey = result.Result.AttestationResult.CredentialPublicKey,
-            UserHandle = result.Result.User.Id,
-            SignatureCounter = result.Result.AttestationResult.Counter
-        };
-        var userId = System.Text.Encoding.UTF8.GetString(result.Result.User.Id);
-        lock (_store)
-        {
-            if (!_store.ContainsKey(userId)) _store[userId] = new List<StoredCredential>();
-            _store[userId].Add(cred);
+            IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
+            
+            var makeParams = new MakeNewCredentialParams
+            {
+                AttestationResponse = attestationResponse,
+                OriginalOptions = options,
+                IsCredentialIdUniqueToUserCallback = callback
+            };
+            
+            var result = await _fido2.MakeNewCredentialAsync(makeParams);
+            
+            if (result == null)
+            {
+                _logger.LogWarning("Credential creation returned null result");
+                return false;
+            }
+
+            var cred = new StoredCredential
+            {
+                Descriptor = new PublicKeyCredentialDescriptor(result.Id),
+                PublicKey = result.PublicKey,
+                UserHandle = result.User.Id,
+                SignatureCounter = result.SignCount
+            };
+            
+            var userId = System.Text.Encoding.UTF8.GetString(result.User.Id);
+            _store.AddOrUpdate(userId, 
+                _ => new List<StoredCredential> { cred },
+                (_, existing) => { existing.Add(cred); return existing; });
+            
+            _logger.LogInformation("Successfully created credential for user {UserId}", userId);
+            return true;
         }
-        return result;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create credential");
+            return false;
+        }
     }
 
     public AssertionOptions GenerateAssertionOptions(string username)
@@ -89,29 +114,54 @@ public class WebAuthnService
     {
         _store.TryGetValue(username, out var creds);
         var stored = creds ?? new List<StoredCredential>();
-        var storedPubKeys = stored.Select(c => new StoredCredential
-        {
-            Descriptor = c.Descriptor,
-            PublicKey = c.PublicKey,
-            UserHandle = c.UserHandle,
-            SignatureCounter = c.SignatureCounter
-        }).ToList();
-
-        IsUserHandleOwnerOfCredentialIdAsync callback = async (args) =>
-        {
-            return true;
-        };
-
-        var result = await _fido2.MakeAssertionAsync(new MakeAssertionParams
-        {
-            AssertionResponse = assertionResponse,
-            OriginalOptions = options,
-            StoredPublicKey = stored[0].PublicKey,
-            StoredSignatureCounter = stored[0].SignatureCounter,
-            IsUserHandleOwnerOfCredentialIdCallback = callback
-        });
         
-        return result != null;
+        if (stored.Count == 0)
+        {
+            _logger.LogWarning("No credentials found for user {Username}", username);
+            return false;
+        }
+
+        // Find the credential that matches the assertion
+        // assertionResponse.Id is byte[], compare directly
+        var matchingCred = stored.FirstOrDefault(c => 
+            c.Descriptor.Id != null && assertionResponse.Id != null &&
+            c.Descriptor.Id.Length == assertionResponse.Id.Length &&
+            c.Descriptor.Id.Zip(assertionResponse.Id, (a, b) => a == b).All(x => x));
+        
+        if (matchingCred == null)
+        {
+            _logger.LogWarning("No matching credential found for assertion from user {Username}", username);
+            // Fallback to first credential for backward compatibility
+            matchingCred = stored[0];
+        }
+
+        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
+
+        try
+        {
+            var result = await _fido2.MakeAssertionAsync(new MakeAssertionParams
+            {
+                AssertionResponse = assertionResponse,
+                OriginalOptions = options,
+                StoredPublicKey = matchingCred.PublicKey,
+                StoredSignatureCounter = matchingCred.SignatureCounter,
+                IsUserHandleOwnerOfCredentialIdCallback = callback
+            });
+            
+            if (result != null)
+            {
+                _logger.LogInformation("Successfully authenticated user {Username}", username);
+                return true;
+            }
+            
+            _logger.LogWarning("Authentication failed for user {Username}", username);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during authentication for user {Username}", username);
+            return false;
+        }
     }
 }
 
