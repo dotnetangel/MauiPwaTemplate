@@ -96,3 +96,21 @@ Placeholders are included:
 
 Replace them with your real Firebase files before running MAUI builds that require Firebase.
 
+---
+
+## Push Notification Documentation
+
+Detailed documentation for push notification registration flows across all platforms:
+
+- **[Overview](docs/push-notifications-overview.md)** - High-level architecture and comparison across platforms
+- **[Web Push (VAPID)](docs/push-notifications-web.md)** - Complete browser push notification flow with diagrams
+- **[Android Push (FCM)](docs/push-notifications-android.md)** - Firebase Cloud Messaging setup and flow for Android
+- **[iOS Push (FCM + APNs)](docs/push-notifications-ios.md)** - Apple Push Notification service with Firebase integration
+
+Each document includes:
+- Detailed step-by-step registration flows with ASCII diagrams
+- Code examples and locations in the codebase
+- Configuration requirements and setup instructions
+- Troubleshooting guides and common issues
+- Security considerations and best practices
+
