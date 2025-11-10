@@ -28,8 +28,11 @@ public class WebPushController : ControllerBase
                 return BadRequest(new { error = "Invalid message data. Title is required." });
             }
 
+            // Sanitize title for logging to prevent log injection
+            var sanitizedTitle = System.Text.RegularExpressions.Regex.Replace(msg.Title, @"[\r\n]", "");
+            
             await _pushService.SendNotificationAsync(msg.Title, msg.Body ?? string.Empty);
-            _logger.LogInformation("Push notification sent: {Title}", msg.Title);
+            _logger.LogInformation("Push notification sent: {Title}", sanitizedTitle);
             return Ok(new { sent = true, message = "Notification sent successfully" });
         }
         catch (Exception ex)

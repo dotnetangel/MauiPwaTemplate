@@ -25,12 +25,15 @@ public class FidoController : ControllerBase
         {
             if (req == null || string.IsNullOrWhiteSpace(req.Username))
             {
-                _logger.LogWarning("Invalid register options request");
+                _logger.LogWarning("Invalid register options request - missing username");
                 return BadRequest(new { error = "Username is required" });
             }
 
+            // Sanitize username for logging to prevent log injection
+            var sanitizedUsername = System.Text.RegularExpressions.Regex.Replace(req.Username, @"[\r\n]", "");
+            
             var options = _service.GenerateCredentialOptions(req.Username, req.DisplayName ?? req.Username, out var _);
-            _logger.LogInformation("Generated credential options for user: {Username}", req.Username);
+            _logger.LogInformation("Generated credential options for user: {Username}", sanitizedUsername);
             return Ok(options);
         }
         catch (Exception ex)
@@ -78,12 +81,15 @@ public class FidoController : ControllerBase
         {
             if (req == null || string.IsNullOrWhiteSpace(req.Username))
             {
-                _logger.LogWarning("Invalid login options request");
+                _logger.LogWarning("Invalid login options request - missing username");
                 return BadRequest(new { error = "Username is required" });
             }
 
+            // Sanitize username for logging to prevent log injection
+            var sanitizedUsername = System.Text.RegularExpressions.Regex.Replace(req.Username, @"[\r\n]", "");
+            
             var options = _service.GenerateAssertionOptions(req.Username);
-            _logger.LogInformation("Generated assertion options for user: {Username}", req.Username);
+            _logger.LogInformation("Generated assertion options for user: {Username}", sanitizedUsername);
             return Ok(options);
         }
         catch (Exception ex)
@@ -98,22 +104,44 @@ public class FidoController : ControllerBase
     {
         try
         {
-            if (wrapper == null || wrapper.Assertion == null || wrapper.Options == null || string.IsNullOrWhiteSpace(wrapper.Username))
+            // Validate all required fields are present and non-empty
+            if (wrapper == null)
             {
-                _logger.LogWarning("Invalid assertion response");
+                _logger.LogWarning("Invalid assertion response - wrapper is null");
+                return BadRequest(new { error = "Invalid login data" });
+            }
+            
+            if (wrapper.Assertion == null)
+            {
+                _logger.LogWarning("Invalid assertion response - assertion is null");
+                return BadRequest(new { error = "Invalid login data" });
+            }
+            
+            if (wrapper.Options == null)
+            {
+                _logger.LogWarning("Invalid assertion response - options is null");
+                return BadRequest(new { error = "Invalid login data" });
+            }
+            
+            if (string.IsNullOrWhiteSpace(wrapper.Username))
+            {
+                _logger.LogWarning("Invalid assertion response - username is missing");
                 return BadRequest(new { error = "Invalid login data" });
             }
 
+            // Sanitize username for logging to prevent log injection
+            var sanitizedUsername = System.Text.RegularExpressions.Regex.Replace(wrapper.Username, @"[\r\n]", "");
+            
             var ok = await _service.MakeAssertionAsync(wrapper.Assertion, wrapper.Options, wrapper.Username);
             
             if (ok)
             {
-                _logger.LogInformation("Successful passkey login for user: {Username}", wrapper.Username);
+                _logger.LogInformation("Successful passkey login for user: {Username}", sanitizedUsername);
                 return Ok(new { success = true, message = "Login successful" });
             }
             else
             {
-                _logger.LogWarning("Failed passkey login for user: {Username}", wrapper.Username);
+                _logger.LogWarning("Failed passkey login for user: {Username}", sanitizedUsername);
                 return Unauthorized(new { success = false, error = "Authentication failed" });
             }
         }
