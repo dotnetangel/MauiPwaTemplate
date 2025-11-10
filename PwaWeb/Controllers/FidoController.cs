@@ -26,7 +26,7 @@ public class FidoController : ControllerBase
     public async Task<IActionResult> RegisterComplete([FromBody] AttestationResponseWrapper wrapper)
     {
         var result = await _service.MakeCredentialAsync(wrapper.Attestation, wrapper.Options);
-        return Ok(new { success = true });
+        return Ok(new { success = result });
     }
 
     [HttpPost("login/options")]

@@ -1,4 +1,5 @@
 using Lib.Net.Http.WebPush;
+using PwaWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,8 +10,9 @@ var vapidSection = builder.Configuration.GetSection("VapidKeys");
 var publicKey = vapidSection.GetValue<string>("PublicKey") ?? string.Empty;
 var privateKey = vapidSection.GetValue<string>("PrivateKey") ?? string.Empty;
 
-builder.Services.AddSingleton(new WebPushService(publicKey, privateKey));
-builder.Services.AddSingleton(new WebAuthnService(builder.Configuration.GetSection("Fido2")));
+builder.Services.AddSingleton<WebPushService>(sp => 
+    new WebPushService(publicKey, privateKey, sp.GetRequiredService<ILogger<WebPushService>>()));
+builder.Services.AddSingleton<WebAuthnService>();
 builder.Services.AddFido2(options =>
 {
     options.ServerDomain = fidoSection.GetValue<string>("ServerDomain") ?? "example.com";

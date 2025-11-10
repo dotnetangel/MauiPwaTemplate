@@ -9,9 +9,6 @@ namespace PwaWeb.Services;
 public class WebAuthnService
 {
     private readonly IFido2 _fido2;
-    private readonly string _origin;
-    private readonly string _serverDomain;
-    private readonly string _serverName;
 
     // production: replace in-memory with persistent DB-backed store
     private readonly Dictionary<string, List<StoredCredential>> _store = new();
@@ -49,23 +46,45 @@ public class WebAuthnService
         return options;
     }
 
-    public async Task<AttestationVerificationSuccess> MakeCredentialAsync(AuthenticatorAttestationRawResponse attestationResponse, CredentialCreateOptions options)
+    public async Task<bool> MakeCredentialAsync(AuthenticatorAttestationRawResponse attestationResponse, CredentialCreateOptions options)
     {
-        var result = await _fido2.MakeNewCredentialAsync(attestationResponse, options, async (args) => true);
-        var cred = new StoredCredential
+        try
         {
-            Descriptor = result.Result.CredentialDescriptor,
-            PublicKey = result.Result.AttestationResult.CredentialPublicKey,
-            UserHandle = result.Result.User.Id,
-            SignatureCounter = result.Result.AttestationResult.Counter
-        };
-        var userId = System.Text.Encoding.UTF8.GetString(result.Result.User.Id);
-        lock (_store)
-        {
-            if (!_store.ContainsKey(userId)) _store[userId] = new List<StoredCredential>();
-            _store[userId].Add(cred);
+            IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
+            
+            var makeParams = new MakeNewCredentialParams
+            {
+                AttestationResponse = attestationResponse,
+                OriginalOptions = options,
+                IsCredentialIdUniqueToUserCallback = callback
+            };
+            
+            var result = await _fido2.MakeNewCredentialAsync(makeParams);
+            
+            if (result == null)
+                return false;
+
+            var cred = new StoredCredential
+            {
+                Descriptor = new PublicKeyCredentialDescriptor(result.Id),
+                PublicKey = result.PublicKey,
+                UserHandle = result.User.Id,
+                SignatureCounter = result.SignCount
+            };
+            
+            var userId = System.Text.Encoding.UTF8.GetString(result.User.Id);
+            lock (_store)
+            {
+                if (!_store.ContainsKey(userId)) 
+                    _store[userId] = new List<StoredCredential>();
+                _store[userId].Add(cred);
+            }
+            return true;
         }
-        return result;
+        catch
+        {
+            return false;
+        }
     }
 
     public AssertionOptions GenerateAssertionOptions(string username)
@@ -89,18 +108,11 @@ public class WebAuthnService
     {
         _store.TryGetValue(username, out var creds);
         var stored = creds ?? new List<StoredCredential>();
-        var storedPubKeys = stored.Select(c => new StoredCredential
-        {
-            Descriptor = c.Descriptor,
-            PublicKey = c.PublicKey,
-            UserHandle = c.UserHandle,
-            SignatureCounter = c.SignatureCounter
-        }).ToList();
+        
+        if (stored.Count == 0)
+            return false;
 
-        IsUserHandleOwnerOfCredentialIdAsync callback = async (args) =>
-        {
-            return true;
-        };
+        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
 
         var result = await _fido2.MakeAssertionAsync(new MakeAssertionParams
         {
