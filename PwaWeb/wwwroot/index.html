@@ -1,33 +1,100 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Sample PWA with Web Push and Passkey support">
+  <meta name="theme-color" content="#4CAF50">
   <link rel="manifest" href="/manifest.json" />
-  <title>Sample PWA (VAPID + Passkeys)</title>
+  <title>PWA Sample - Push & Passkeys</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 
 <body>
   <div class="container">
-    <h1>Sample PWA (VAPID + Passkeys)</h1>
-    <section>
-      <h2>Web Push (VAPID)</h2>
-      <p id="status">Status: Not registered</p>
-      <button id="registerBtn">Register for push (web)</button>
-      <button id="sendTestBtn">Send test push (server)</button>
-    </section>
-    <section>
-      <h2>Passkeys (WebAuthn)</h2>
-      <input id="username" placeholder="username" />
-      <input id="displayName" placeholder="display name" />
-      <button id="registerPasskey">Register Passkey</button>
-      <input id="loginUser" placeholder="username to login" />
-      <button id="loginPasskey">Login with Passkey</button>
-      <pre id="log"></pre>
-    </section>
+    <header>
+      <h1>🔔 PWA Sample Application</h1>
+      <p class="subtitle">Demonstrating Web Push (VAPID) & Passkeys (WebAuthn)</p>
+    </header>
+
+    <main>
+      <!-- Web Push Section -->
+      <section class="card">
+        <h2>📢 Web Push Notifications</h2>
+        <p class="info">Register your device to receive push notifications from this server.</p>
+        <div id="pushStatus" class="status">
+          <span class="status-icon">⚪</span>
+          <span id="pushStatusText">Not registered</span>
+        </div>
+        <div class="button-group">
+          <button id="registerBtn" class="btn btn-primary">
+            <span>🔔</span> Register for Push
+          </button>
+          <button id="sendTestBtn" class="btn btn-secondary">
+            <span>📨</span> Send Test Notification
+          </button>
+        </div>
+        <div id="pushError" class="error-message" style="display: none;"></div>
+        <div id="pushSuccess" class="success-message" style="display: none;"></div>
+      </section>
+
+      <!-- Passkeys Section -->
+      <section class="card">
+        <h2>🔐 Passkeys (WebAuthn/FIDO2)</h2>
+        <p class="info">Use biometric authentication or security keys for passwordless login.</p>
+        
+        <!-- Registration -->
+        <div class="form-section">
+          <h3>Register New Passkey</h3>
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input id="username" type="text" placeholder="Enter username" class="input-field" />
+          </div>
+          <div class="form-group">
+            <label for="displayName">Display Name</label>
+            <input id="displayName" type="text" placeholder="Enter display name" class="input-field" />
+          </div>
+          <button id="registerPasskey" class="btn btn-primary">
+            <span>🔐</span> Register Passkey
+          </button>
+        </div>
+
+        <!-- Login -->
+        <div class="form-section">
+          <h3>Login with Passkey</h3>
+          <div class="form-group">
+            <label for="loginUser">Username</label>
+            <input id="loginUser" type="text" placeholder="Enter username" class="input-field" />
+          </div>
+          <button id="loginPasskey" class="btn btn-success">
+            <span>✅</span> Login with Passkey
+          </button>
+        </div>
+
+        <div id="passkeyError" class="error-message" style="display: none;"></div>
+        <div id="passkeySuccess" class="success-message" style="display: none;"></div>
+        <pre id="log" class="log-output"></pre>
+      </section>
+
+      <!-- Info Section -->
+      <section class="card info-card">
+        <h3>ℹ️ About This Application</h3>
+        <p>This is a Progressive Web App (PWA) demonstrating:</p>
+        <ul>
+          <li><strong>Web Push Notifications:</strong> Using VAPID protocol for secure browser notifications</li>
+          <li><strong>Passkeys (WebAuthn):</strong> Passwordless authentication using biometrics or security keys</li>
+          <li><strong>Service Worker:</strong> Offline capability and background notification handling</li>
+          <li><strong>Native Integration:</strong> Can be wrapped in a MAUI app for native mobile experience</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p>Built with ASP.NET Core 8.0 | <a href="https://github.com/dotnetangel/MauiPwaTemplate" target="_blank">View on GitHub</a></p>
+    </footer>
   </div>
+
   <script src="/webauthn.js"></script>
   <script src="/main.js"></script>
 </body>
