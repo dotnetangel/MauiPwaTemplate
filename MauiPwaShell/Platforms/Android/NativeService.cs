@@ -1,57 +1,89 @@
-using Android.Content;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace MauiPwaShell.Services;
 
 /// <summary>
 /// Android-specific implementation of the native service
-/// This wraps the native Android SDK using .NET Android bindings
+/// This uses LibraryImport (P/Invoke) to call native C library functions
 /// </summary>
 public partial class NativeService : INativeService
 {
-    private Com.Example.Nativesdk.ExampleSdk? _sdk;
-    private readonly Context _context;
+    private const string LibraryName = "examplesdk";
+    private const int BufferSize = 1024;
 
-    public NativeService()
-    {
-        _context = Android.App.Application.Context;
-        _sdk = new Com.Example.Nativesdk.ExampleSdk(_context);
-    }
+    // P/Invoke declarations using LibraryImport (modern .NET approach)
+    [LibraryImport(LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [return: MarshalAs(UnmanagedType.I4)]
+    private static partial int ExampleSdk_Initialize(string apiKey);
+
+    [LibraryImport(LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [return: MarshalAs(UnmanagedType.I4)]
+    private static partial int ExampleSdk_PerformOperation(string input, byte[] output, int outputSize);
+
+    [LibraryImport(LibraryName)]
+    [return: MarshalAs(UnmanagedType.I4)]
+    private static partial int ExampleSdk_GetDeviceInfo(byte[] output, int outputSize);
+
+    [LibraryImport(LibraryName)]
+    [return: MarshalAs(UnmanagedType.I4)]
+    private static partial int ExampleSdk_IsInitialized();
+
+    [LibraryImport(LibraryName)]
+    private static partial void ExampleSdk_Dispose();
 
     public void Initialize(string apiKey)
     {
-        if (_sdk == null)
+        if (string.IsNullOrEmpty(apiKey))
         {
-            _sdk = new Com.Example.Nativesdk.ExampleSdk(_context);
+            throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
         }
-        _sdk.Initialize(apiKey);
+
+        int result = ExampleSdk_Initialize(apiKey);
+        if (result == 0)
+        {
+            throw new InvalidOperationException("Failed to initialize SDK");
+        }
     }
 
     public string PerformOperation(string input)
     {
-        if (_sdk == null)
+        if (string.IsNullOrEmpty(input))
         {
-            throw new InvalidOperationException("SDK not initialized");
+            throw new ArgumentException("Input cannot be null or empty", nameof(input));
         }
-        return _sdk.PerformOperation(input) ?? string.Empty;
+
+        byte[] buffer = new byte[BufferSize];
+        int result = ExampleSdk_PerformOperation(input, buffer, buffer.Length);
+        
+        if (result < 0)
+        {
+            throw new InvalidOperationException("Operation failed. Ensure SDK is initialized.");
+        }
+
+        return Encoding.UTF8.GetString(buffer, 0, result);
     }
 
     public string GetDeviceInfo()
     {
-        if (_sdk == null)
+        byte[] buffer = new byte[BufferSize];
+        int result = ExampleSdk_GetDeviceInfo(buffer, buffer.Length);
+        
+        if (result < 0)
         {
-            throw new InvalidOperationException("SDK not initialized");
+            throw new InvalidOperationException("Failed to get device info. Ensure SDK is initialized.");
         }
-        return _sdk.GetDeviceInfo() ?? string.Empty;
+
+        return Encoding.UTF8.GetString(buffer, 0, result);
     }
 
     public bool IsInitialized()
     {
-        return _sdk?.IsInitialized() ?? false;
+        return ExampleSdk_IsInitialized() != 0;
     }
 
     public void Dispose()
     {
-        _sdk?.Dispose();
-        _sdk = null;
+        ExampleSdk_Dispose();
     }
 }
