@@ -51,52 +51,18 @@
     <BundleResource Include="Platforms\iOS\GoogleService-Info.plist" />
   </ItemGroup>
 
-  <!-- Native Library Integration using LibraryImport/DllImport -->
-  
-  <!-- Android: Compile and package native C library -->
+  <!-- Android Native Bindings -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-android'))">
-    <!-- Native library sources -->
-    <None Include="NativeBindings\examplesdk.h" />
-    <None Include="NativeBindings\examplesdk.c" />
-    <None Include="NativeBindings\build-android.sh" />
-    
-    <!-- Pre-built native libraries for Android (if available) -->
-    <!-- Build the native library using build-android.sh before building the MAUI app -->
-    <!-- Uncomment these lines after building the native library:
-    <AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libexamplesdk.so">
-      <Abi>arm64-v8a</Abi>
-    </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libexamplesdk.so">
-      <Abi>armeabi-v7a</Abi>
-    </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\libs\x86\libexamplesdk.so">
-      <Abi>x86</Abi>
-    </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libexamplesdk.so">
-      <Abi>x86_64</Abi>
-    </AndroidNativeLibrary>
-    -->
+    <!-- Include Java source files for Slim Bindings -->
+    <AndroidJavaSource Include="NativeBindings\Android\*.java" />
   </ItemGroup>
 
-  <!-- iOS: Link native C library -->
+  <!-- iOS Native Bindings -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios'))">
-    <!-- Native library sources -->
-    <None Include="NativeBindings\examplesdk.h" />
-    <None Include="NativeBindings\examplesdk.c" />
-    <None Include="NativeBindings\build-ios.sh" />
-    
-    <!-- Compile the C source directly into the app -->
-    <Compile Include="NativeBindings\examplesdk.c">
-      <CompileAs>C</CompileAs>
+    <!-- Include Objective-C source files for Slim Bindings -->
+    <Compile Include="NativeBindings\iOS\*.m">
+      <Link>Platforms\iOS\NativeLib\%(Filename)%(Extension)</Link>
     </Compile>
-    
-    <!-- Alternative: Link pre-built static library (uncomment if using pre-built libs)
-    <NativeReference Include="Platforms\iOS\libs\libexamplesdk-arm64.dylib">
-      <Kind>Dynamic</Kind>
-      <SmartLink>False</SmartLink>
-      <ForceLoad>True</ForceLoad>
-    </NativeReference>
-    -->
   </ItemGroup>
 
 </Project>

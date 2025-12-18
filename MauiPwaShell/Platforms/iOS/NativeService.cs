@@ -1,89 +1,79 @@
-using System.Runtime.InteropServices;
-using System.Text;
+using Foundation;
+using ObjCRuntime;
 
 namespace MauiPwaShell.Services;
 
 /// <summary>
 /// iOS-specific implementation of the native service
-/// This uses LibraryImport (P/Invoke) to call native C library functions
+/// This wraps the native iOS SDK using .NET iOS bindings
 /// </summary>
 public partial class NativeService : INativeService
 {
-    private const string LibraryName = "__Internal"; // Use __Internal for iOS static libraries
-    private const int BufferSize = 1024;
+    private ExampleSdk? _sdk;
 
-    // P/Invoke declarations using LibraryImport (modern .NET approach)
-    [LibraryImport(LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    [return: MarshalAs(UnmanagedType.I4)]
-    private static partial int ExampleSdk_Initialize(string apiKey);
-
-    [LibraryImport(LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    [return: MarshalAs(UnmanagedType.I4)]
-    private static partial int ExampleSdk_PerformOperation(string input, byte[] output, int outputSize);
-
-    [LibraryImport(LibraryName)]
-    [return: MarshalAs(UnmanagedType.I4)]
-    private static partial int ExampleSdk_GetDeviceInfo(byte[] output, int outputSize);
-
-    [LibraryImport(LibraryName)]
-    [return: MarshalAs(UnmanagedType.I4)]
-    private static partial int ExampleSdk_IsInitialized();
-
-    [LibraryImport(LibraryName)]
-    private static partial void ExampleSdk_Dispose();
+    public NativeService()
+    {
+        _sdk = new ExampleSdk();
+    }
 
     public void Initialize(string apiKey)
     {
-        if (string.IsNullOrEmpty(apiKey))
+        if (_sdk == null)
         {
-            throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
+            _sdk = new ExampleSdk();
         }
-
-        int result = ExampleSdk_Initialize(apiKey);
-        if (result == 0)
-        {
-            throw new InvalidOperationException("Failed to initialize SDK");
-        }
+        _sdk.InitializeWithApiKey(apiKey);
     }
 
     public string PerformOperation(string input)
     {
-        if (string.IsNullOrEmpty(input))
+        if (_sdk == null)
         {
-            throw new ArgumentException("Input cannot be null or empty", nameof(input));
+            throw new InvalidOperationException("SDK not initialized");
         }
-
-        byte[] buffer = new byte[BufferSize];
-        int result = ExampleSdk_PerformOperation(input, buffer, buffer.Length);
-        
-        if (result < 0)
-        {
-            throw new InvalidOperationException("Operation failed. Ensure SDK is initialized.");
-        }
-
-        return Encoding.UTF8.GetString(buffer, 0, result);
+        return _sdk.PerformOperation(input);
     }
 
     public string GetDeviceInfo()
     {
-        byte[] buffer = new byte[BufferSize];
-        int result = ExampleSdk_GetDeviceInfo(buffer, buffer.Length);
-        
-        if (result < 0)
+        if (_sdk == null)
         {
-            throw new InvalidOperationException("Failed to get device info. Ensure SDK is initialized.");
+            throw new InvalidOperationException("SDK not initialized");
         }
-
-        return Encoding.UTF8.GetString(buffer, 0, result);
+        return _sdk.GetDeviceInfo();
     }
 
     public bool IsInitialized()
     {
-        return ExampleSdk_IsInitialized() != 0;
+        return _sdk?.IsInitialized ?? false;
     }
 
     public void Dispose()
     {
-        ExampleSdk_Dispose();
+        _sdk?.Dispose();
+        _sdk = null;
     }
+}
+
+// iOS Binding definitions for ExampleSdk
+// This would normally be in a separate binding project, but for simplicity
+// we're including it here with the MAUI Slim Bindings approach
+
+[BaseType(typeof(NSObject))]
+interface ExampleSdk
+{
+    [Export("initializeWithApiKey:")]
+    void InitializeWithApiKey(string apiKey);
+
+    [Export("performOperation:")]
+    string PerformOperation(string input);
+
+    [Export("getDeviceInfo")]
+    string GetDeviceInfo();
+
+    [Export("isInitialized")]
+    bool IsInitialized { get; }
+
+    [Export("dispose")]
+    void Dispose();
 }
