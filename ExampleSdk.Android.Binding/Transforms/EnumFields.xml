@@ -1,0 +1,11 @@
+<enum-field-mappings>
+  <!--
+    This file maps Java enum fields to C# enum values.
+    
+    Example:
+    <mapping jni-class="com/example/MyEnum" clr-enum-type="Com.Example.MyEnum">
+      <field jni-name="VALUE_ONE" clr-name="ValueOne" value="1" />
+      <field jni-name="VALUE_TWO" clr-name="ValueTwo" value="2" />
+    </mapping>
+  -->
+</enum-field-mappings>

@@ -51,4 +51,13 @@
     <BundleResource Include="Platforms\iOS\GoogleService-Info.plist" />
   </ItemGroup>
 
+  <!-- Native SDK Binding Projects -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-android'))">
+    <ProjectReference Include="..\ExampleSdk.Android.Binding\ExampleSdk.Android.Binding.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios')) or $(TargetFramework.StartsWith('net8.0-maccatalyst'))">
+    <ProjectReference Include="..\ExampleSdk.iOS.Binding\ExampleSdk.iOS.Binding.csproj" />
+  </ItemGroup>
+
 </Project>

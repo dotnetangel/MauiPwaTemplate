@@ -88,6 +88,30 @@
           <li><strong>Native Integration:</strong> Can be wrapped in a MAUI app for native mobile experience</li>
         </ul>
       </section>
+
+      <!-- Native SDK Section -->
+      <section class="card">
+        <h2>📱 Native SDK Integration</h2>
+        <p class="info">Interact with platform-specific native SDKs from the web app.</p>
+        <div id="nativeStatus" class="status">
+          <span class="status-icon">⚪</span>
+          <span id="nativeStatusText">Not initialized</span>
+        </div>
+        <div class="button-group">
+          <button id="initNativeBtn" class="btn btn-primary">
+            <span>🔌</span> Initialize SDK
+          </button>
+          <button id="performNativeOpBtn" class="btn btn-secondary">
+            <span>⚙️</span> Perform Operation
+          </button>
+          <button id="getDeviceInfoBtn" class="btn btn-info">
+            <span>📱</span> Get Device Info
+          </button>
+        </div>
+        <div id="nativeError" class="error-message" style="display: none;"></div>
+        <div id="nativeSuccess" class="success-message" style="display: none;"></div>
+        <div id="nativeResult" class="result-box" style="display: none;"></div>
+      </section>
     </main>
 
     <footer>

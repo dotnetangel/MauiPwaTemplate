@@ -1,0 +1,10 @@
+<enum-method-mappings>
+  <!--
+    This file maps Java methods that should be treated as C# enums.
+    
+    Example:
+    <mapping jni-class="com/example/MyClass">
+      <method jni-name="getStatus" parameter="status" clr-enum-type="Com.Example.Status" />
+    </mapping>
+  -->
+</enum-method-mappings>

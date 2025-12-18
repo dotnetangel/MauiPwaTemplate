@@ -297,3 +297,117 @@ document.getElementById('loginPasskey').addEventListener('click', async () => {
         }
     }
 })();
+
+// ==================== Native SDK Integration ====================
+
+function updateNativeStatus(text, icon = '⚪') {
+    const statusEl = document.getElementById('nativeStatusText');
+    const iconEl = document.querySelector('#nativeStatus .status-icon');
+    if (statusEl) statusEl.textContent = text;
+    if (iconEl) iconEl.textContent = icon;
+}
+
+function showNativeError(message) {
+    showError('nativeError', message);
+}
+
+function showNativeSuccess(message) {
+    showSuccess('nativeSuccess', message);
+}
+
+function showNativeResult(result) {
+    const el = document.getElementById('nativeResult');
+    if (el) {
+        el.textContent = result;
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 10000);
+    }
+}
+
+// Wait for native bridge to be ready
+let nativeBridgeReady = false;
+window.addEventListener('nativeBridgeReady', () => {
+    nativeBridgeReady = true;
+    console.log('[PWA] Native bridge is ready');
+});
+
+// Initialize Native SDK
+const initNativeBtn = document.getElementById('initNativeBtn');
+if (initNativeBtn) {
+    initNativeBtn.addEventListener('click', async () => {
+        if (!window.nativeBridge) {
+            showNativeError('Native bridge not available. This feature only works in the MAUI app.');
+            return;
+        }
+        
+        initNativeBtn.disabled = true;
+        updateNativeStatus('Initializing...', '⏳');
+        
+        try {
+            await window.nativeBridge.initialize('demo-api-key-12345');
+            updateNativeStatus('SDK Initialized', '✅');
+            showNativeSuccess('Native SDK initialized successfully!');
+        } catch (e) {
+            console.error('Native SDK init error:', e);
+            updateNativeStatus('Initialization failed', '❌');
+            showNativeError(`Error: ${e.message}`);
+        } finally {
+            initNativeBtn.disabled = false;
+        }
+    });
+}
+
+// Perform Native Operation
+const performNativeOpBtn = document.getElementById('performNativeOpBtn');
+if (performNativeOpBtn) {
+    performNativeOpBtn.addEventListener('click', async () => {
+        if (!window.nativeBridge) {
+            showNativeError('Native bridge not available. This feature only works in the MAUI app.');
+            return;
+        }
+        
+        performNativeOpBtn.disabled = true;
+        
+        try {
+            const input = prompt('Enter text to process:', 'Hello from PWA!');
+            if (!input) {
+                performNativeOpBtn.disabled = false;
+                return;
+            }
+            
+            const result = await window.nativeBridge.performOperation(input);
+            showNativeSuccess('Operation completed successfully!');
+            showNativeResult(result);
+        } catch (e) {
+            console.error('Native operation error:', e);
+            showNativeError(`Error: ${e.message}`);
+        } finally {
+            performNativeOpBtn.disabled = false;
+        }
+    });
+}
+
+// Get Device Info
+const getDeviceInfoBtn = document.getElementById('getDeviceInfoBtn');
+if (getDeviceInfoBtn) {
+    getDeviceInfoBtn.addEventListener('click', async () => {
+        if (!window.nativeBridge) {
+            showNativeError('Native bridge not available. This feature only works in the MAUI app.');
+            return;
+        }
+        
+        getDeviceInfoBtn.disabled = true;
+        
+        try {
+            const info = await window.nativeBridge.getDeviceInfo();
+            showNativeSuccess('Device info retrieved!');
+            showNativeResult(info);
+        } catch (e) {
+            console.error('Get device info error:', e);
+            showNativeError(`Error: ${e.message}`);
+        } finally {
+            getDeviceInfoBtn.disabled = false;
+        }
+    });
+}
+
