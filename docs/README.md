@@ -19,6 +19,11 @@ Complete guides for integrating platform-specific native SDKs with your MAUI PWA
   - Binding approaches (Slim vs Traditional)
   - Design decisions and patterns
   - Best practices
+- **[⚠️ Gotchas & Best Practices](./native-bindings-gotchas.md)** - Avoid common pitfalls
+  - Critical gotchas and workarounds
+  - Platform-specific issues
+  - Performance considerations
+  - Real-world debugging tips
 
 ### Platform-Specific Guides
 - **[🤖 Android Bindings Guide](./native-bindings-android.md)** - Complete Android integration (13KB)

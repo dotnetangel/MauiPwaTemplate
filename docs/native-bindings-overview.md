@@ -2,12 +2,12 @@
 
 ## Overview
 
-This guide demonstrates how to integrate native C/C++ libraries into your MAUI PWA application using the .NET MAUI Community Toolkit Native Library Interop approach with `LibraryImport`/`DllImport`. The implementation showcases a complete end-to-end integration where web-based button clicks in the PWA can trigger native library APIs through a JavaScript-to-Native bridge.
+This guide demonstrates how to integrate native platform-specific SDKs into your MAUI PWA application using Java (Android) and Objective-C (iOS) bindings, following the .NET MAUI Community Toolkit Native Library Interop approach. The implementation showcases a complete end-to-end integration where web-based button clicks in the PWA can trigger native SDK APIs through a JavaScript-to-Native bridge.
 
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Native Library Interop Approaches](#native-library-interop-approaches)
+2. [Native Binding Approaches](#native-binding-approaches)
 3. [Quick Start](#quick-start)
 4. [Implementation Guides](#implementation-guides)
 5. [Web-to-Native Bridge](#web-to-native-bridge)
@@ -16,6 +16,7 @@ This guide demonstrates how to integrate native C/C++ libraries into your MAUI P
 ## Getting Started
 
 - **New to native bindings?** → [Quick Start Guide](./native-bindings-quickstart.md)
+- **Want to avoid common issues?** → [⚠️ Gotchas & Best Practices](./native-bindings-gotchas.md)
 - **Want detailed steps?** → See Implementation Guides below
 - **Ready to test?** → [Testing and Building Guide](./testing-and-building.md)
 
@@ -67,7 +68,7 @@ This guide demonstrates how to integrate native C/C++ libraries into your MAUI P
 └──────────────────────────────┘  └─────────────────────────┘
 ```
 
-## Native Library Interop Approaches
+## Native Binding Approaches
 
 ### 1. LibraryImport (Recommended - Used in This Template)
 
