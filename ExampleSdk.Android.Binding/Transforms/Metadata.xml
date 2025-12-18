@@ -1,0 +1,16 @@
+<metadata>
+  <!--
+    This file contains metadata transformations for the Android binding.
+    Use it to customize the generated C# code.
+    
+    Common transformations:
+    - Remove internal classes not needed in C#
+    - Rename types to avoid conflicts
+    - Change visibility of types/members
+    - Fix incorrect generic type mappings
+    
+    Example:
+    <remove-node path="/api/package[@name='com.example.internal']/class[@name='InternalClass']" />
+    <attr path="/api/package[@name='com.example']/class[@name='Builder']" name="managedName">SdkBuilder</attr>
+  -->
+</metadata>

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>true</ImplicitUsings>
+    <IsBindingProject>true</IsBindingProject>
+    <IsTrimmable>true</IsTrimmable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-ios'">11.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-maccatalyst'">13.1</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- Binding API definitions -->
+  <ItemGroup>
+    <ObjcBindingApiDefinition Include="ApiDefinition.cs" />
+    <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
+  </ItemGroup>
+
+  <!-- Include Objective-C source files from NativeBindings -->
+  <ItemGroup>
+    <Compile Include="../MauiPwaShell/NativeBindings/iOS/*.m">
+      <Link>Native/%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+
+  <!-- Optionally include header files for reference -->
+  <ItemGroup>
+    <None Include="../MauiPwaShell/NativeBindings/iOS/*.h">
+      <Link>Native/%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
+</Project>

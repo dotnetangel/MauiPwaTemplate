@@ -1,11 +1,10 @@
-using Foundation;
-using ObjCRuntime;
+using ExampleSdkiOS;
 
 namespace MauiPwaShell.Services;
 
 /// <summary>
 /// iOS-specific implementation of the native service
-/// This wraps the native iOS SDK using .NET iOS bindings
+/// This wraps the native iOS SDK using the ExampleSdk.iOS.Binding project
 /// </summary>
 public partial class NativeService : INativeService
 {
@@ -53,27 +52,4 @@ public partial class NativeService : INativeService
         _sdk?.Dispose();
         _sdk = null;
     }
-}
-
-// iOS Binding definitions for ExampleSdk
-// This would normally be in a separate binding project, but for simplicity
-// we're including it here with the MAUI Slim Bindings approach
-
-[BaseType(typeof(NSObject))]
-interface ExampleSdk
-{
-    [Export("initializeWithApiKey:")]
-    void InitializeWithApiKey(string apiKey);
-
-    [Export("performOperation:")]
-    string PerformOperation(string input);
-
-    [Export("getDeviceInfo")]
-    string GetDeviceInfo();
-
-    [Export("isInitialized")]
-    bool IsInitialized { get; }
-
-    [Export("dispose")]
-    void Dispose();
 }
