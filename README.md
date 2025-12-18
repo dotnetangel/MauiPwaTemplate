@@ -114,3 +114,42 @@ Each document includes:
 - Troubleshooting guides and common issues
 - Security considerations and best practices
 
+---
+
+## Native SDK Bindings
+
+This template demonstrates how to integrate platform-specific native SDKs (Android/iOS) with your MAUI PWA application using a complete web-to-native bridge.
+
+### Features
+
+- **MAUI Slim Bindings** - Lightweight approach to bind native SDKs without separate binding projects
+- **Web-to-Native Bridge** - JavaScript interface for PWA to call native SDK APIs
+- **Example Implementations** - Working sample SDKs for both Android and iOS
+- **End-to-End Integration** - Button clicks in PWA trigger native operations
+
+### Documentation
+
+Comprehensive guides for native SDK integration:
+
+- **[Overview](docs/native-bindings-overview.md)** - Architecture and binding approaches
+- **[Android Bindings](docs/native-bindings-android.md)** - Step-by-step Android SDK integration
+- **[iOS Bindings](docs/native-bindings-ios.md)** - Step-by-step iOS SDK integration  
+- **[Web-to-Native Bridge](docs/web-to-native-bridge.md)** - JavaScript bridge implementation details
+
+### Quick Example
+
+In the PWA (JavaScript):
+```javascript
+// Initialize native SDK
+await window.nativeBridge.initialize('your-api-key');
+
+// Call native SDK method
+const result = await window.nativeBridge.performOperation('input data');
+
+// Get device info from native SDK
+const info = await window.nativeBridge.getDeviceInfo();
+```
+
+The bridge automatically routes these calls to platform-specific implementations in Android (Java) or iOS (Objective-C/Swift).
+
+---

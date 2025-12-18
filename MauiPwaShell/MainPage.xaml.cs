@@ -1,14 +1,21 @@
 using Plugin.Firebase.CloudMessaging;
+using MauiPwaShell.Services;
 
 namespace MauiPwaShell;
 
 public partial class MainPage : ContentPage
 {
     private const string PwaUrl = "http://10.0.2.2:5000/";
+    private readonly NativeBridge _nativeBridge;
 
     public MainPage()
     {
         InitializeComponent();
+        
+        // Initialize native services and bridge
+        var nativeService = new NativeService();
+        _nativeBridge = new NativeBridge(nativeService);
+        
         PwaView.Navigated += PwaView_Navigated;
         PwaView.Source = PwaUrl;
     }
@@ -17,13 +24,17 @@ public partial class MainPage : ContentPage
     {
         try
         {
+            // Inject FCM token
             var token = await CrossFirebaseCloudMessaging.Current.GetTokenAsync();
             if (!string.IsNullOrEmpty(token))
                 await InjectTokenIntoWebAsync(token);
+            
+            // Setup native bridge
+            await SetupNativeBridgeAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MAUI] Error getting token on navigated: {ex.Message}");
+            Console.WriteLine($"[MAUI] Error on navigated: {ex.Message}");
         }
     }
 
@@ -53,6 +64,122 @@ public partial class MainPage : ContentPage
         catch (Exception ex)
         {
             Console.WriteLine($"[MAUI] InjectTokenIntoWebAsync error: {ex.Message}");
+        }
+    }
+
+    private async Task SetupNativeBridgeAsync()
+    {
+        try
+        {
+            var js = @"
+(function() {
+    // Define the native bridge interface
+    window.nativeBridge = {
+        // Send a message to the native layer
+        sendMessage: async function(action, data) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const request = JSON.stringify({ action: action, data: data });
+                    const callbackName = 'nativeCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    
+                    // Create a temporary callback function
+                    window[callbackName] = function(response) {
+                        delete window[callbackName];
+                        const result = JSON.parse(response);
+                        if (result.success) {
+                            resolve(result.data);
+                        } else {
+                            reject(new Error(result.error || 'Unknown error'));
+                        }
+                    };
+                    
+                    // Call the native handler with callback name
+                    window.location = 'nativebridge://call?callback=' + callbackName + '&message=' + encodeURIComponent(request);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        },
+        
+        // Convenience methods
+        initialize: function(apiKey) {
+            return this.sendMessage('initialize', { apiKey: apiKey });
+        },
+        performOperation: function(input) {
+            return this.sendMessage('performOperation', { input: input });
+        },
+        getDeviceInfo: function() {
+            return this.sendMessage('getDeviceInfo', {});
+        },
+        isInitialized: function() {
+            return this.sendMessage('isInitialized', {});
+        }
+    };
+    
+    // Dispatch event to notify that the bridge is ready
+    window.dispatchEvent(new CustomEvent('nativeBridgeReady'));
+    console.log('[PWA] Native bridge initialized');
+})();
+";
+
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                await PwaView.EvaluateJavaScriptAsync(js);
+            });
+
+            // Register the native message handler
+            PwaView.Navigating += OnWebViewNavigating;
+
+            Console.WriteLine("[MAUI] Native bridge setup complete");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MAUI] SetupNativeBridgeAsync error: {ex.Message}");
+        }
+    }
+
+    private async void OnWebViewNavigating(object? sender, WebNavigatingEventArgs e)
+    {
+        // Intercept native bridge calls
+        if (e.Url.StartsWith("nativebridge://call"))
+        {
+            e.Cancel = true;
+            await HandleNativeBridgeCallAsync(e.Url);
+        }
+    }
+
+    private async Task HandleNativeBridgeCallAsync(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var callbackName = query["callback"];
+            var message = query["message"];
+
+            if (string.IsNullOrEmpty(callbackName) || string.IsNullOrEmpty(message))
+            {
+                Console.WriteLine("[MAUI] Invalid native bridge call");
+                return;
+            }
+
+            // Process the message through the native bridge
+            var response = await _nativeBridge.HandleMessageAsync(message);
+
+            // Call back to JavaScript with the response
+            var escapedResponse = response.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\n", "\\n");
+            var callbackJs = $"if (typeof window['{callbackName}'] === 'function') {{ window['{callbackName}']('{escapedResponse}'); }}";
+
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                await PwaView.EvaluateJavaScriptAsync(callbackJs);
+            });
+
+            Console.WriteLine($"[MAUI] Handled native bridge call: {message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MAUI] HandleNativeBridgeCallAsync error: {ex.Message}");
         }
     }
 }

@@ -51,4 +51,18 @@
     <BundleResource Include="Platforms\iOS\GoogleService-Info.plist" />
   </ItemGroup>
 
+  <!-- Android Native Bindings -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-android'))">
+    <!-- Include Java source files for Slim Bindings -->
+    <AndroidJavaSource Include="NativeBindings\Android\*.java" />
+  </ItemGroup>
+
+  <!-- iOS Native Bindings -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios'))">
+    <!-- Include Objective-C source files for Slim Bindings -->
+    <Compile Include="NativeBindings\iOS\*.m">
+      <Link>Platforms\iOS\NativeLib\%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+
 </Project>
