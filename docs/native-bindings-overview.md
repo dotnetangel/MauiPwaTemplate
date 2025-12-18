@@ -2,12 +2,12 @@
 
 ## Overview
 
-This guide demonstrates how to integrate native platform-specific SDKs into your MAUI PWA application using MAUI's Slim Binding methodology. The implementation showcases a complete end-to-end integration where web-based button clicks in the PWA can trigger native SDK APIs through a JavaScript-to-Native bridge.
+This guide demonstrates how to integrate native C/C++ libraries into your MAUI PWA application using the .NET MAUI Community Toolkit Native Library Interop approach with `LibraryImport`/`DllImport`. The implementation showcases a complete end-to-end integration where web-based button clicks in the PWA can trigger native library APIs through a JavaScript-to-Native bridge.
 
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Native Binding Approaches](#native-binding-approaches)
+2. [Native Library Interop Approaches](#native-library-interop-approaches)
 3. [Quick Start](#quick-start)
 4. [Implementation Guides](#implementation-guides)
 5. [Web-to-Native Bridge](#web-to-native-bridge)
@@ -53,72 +53,98 @@ This guide demonstrates how to integrate native platform-specific SDKs into your
 │  │  Android              │    │  iOS                    │   │
 │  │  NativeService.cs     │    │  NativeService.cs       │   │
 │  │  (Platforms/Android)  │    │  (Platforms/iOS)        │   │
+│  │  - LibraryImport      │    │  - LibraryImport        │   │
+│  │  - P/Invoke calls     │    │  - P/Invoke calls       │   │
 │  └──────────────────────┘    └─────────────────────────┘   │
 └────────────────────┬────────────────────┬───────────────────┘
                      │                     │
                      ▼                     ▼
 ┌──────────────────────────────┐  ┌─────────────────────────┐
-│  Native Android SDK          │  │  Native iOS SDK         │
-│  (.jar/.aar libraries)       │  │  (.framework/.xcframework)│
-│  - Java/Kotlin classes       │  │  - Swift/Objective-C    │
-│  - Bound via C# wrappers     │  │  - Bound via C# wrappers│
+│  Native C/C++ Library        │  │  Native C/C++ Library   │
+│  (.so libraries)             │  │  (compiled into app)    │
+│  - libexamplesdk.so          │  │  - examplesdk.c         │
+│  - Direct C function calls   │  │  - Direct C calls       │
 └──────────────────────────────┘  └─────────────────────────┘
 ```
 
-## Native Binding Approaches
+## Native Library Interop Approaches
 
-### 1. MAUI Slim Bindings (Recommended for New Projects)
+### 1. LibraryImport (Recommended - Used in This Template)
 
-**What it is:** A lightweight approach introduced in .NET 8+ that allows you to create bindings directly in your MAUI project without needing separate binding library projects.
+**What it is:** Modern P/Invoke using source-generated interop introduced in .NET 7+. This is the recommended approach by the .NET MAUI Community Toolkit for calling native C/C++ libraries.
 
 **Pros:**
-- Simpler project structure
-- Less ceremony and boilerplate
-- Faster iteration during development
-- Better integration with modern .NET tooling
+- Cross-platform C/C++ codebase (write once, use everywhere)
+- Modern source-generated P/Invoke (faster, AOT-friendly)
+- No need for platform-specific wrapper layers (Java/Objective-C)
+- Better performance - direct native calls
+- Type-safe with compile-time checking
+- Simpler maintenance - single codebase
 
 **Cons:**
-- Less suitable for complex SDKs with many types
-- Cannot be easily shared across projects as a NuGet package
+- Requires building native C/C++ libraries
+- Need NDK (Android) and Xcode (iOS) for compilation
+- Less suitable if SDK is only available as Java/.NET/Objective-C
 
 **Best for:** 
-- Small to medium SDKs
-- Rapid prototyping
-- App-specific bindings
+- Native C/C++ libraries
+- Performance-critical operations
+- Cross-platform native code
+- Direct hardware/OS API access
 
-### 2. Traditional Binding Libraries
+**Example:**
+```csharp
+[LibraryImport("examplesdk", StringMarshalling = StringMarshalling.Utf8)]
+[return: MarshalAs(UnmanagedType.I4)]
+private static partial int ExampleSdk_Initialize(string apiKey);
+```
 
-**What it is:** Creating dedicated Android Binding Library or iOS Binding Library projects that produce reusable DLLs.
+### 2. DllImport (Legacy P/Invoke)
+
+**What it is:** Traditional P/Invoke for calling native libraries.
 
 **Pros:**
-- Better for large, complex SDKs
-- Can be packaged and distributed as NuGet packages
-- Separation of concerns
+- Works with older .NET versions
+- Well-documented and widely used
+- Compatible with existing code
 
 **Cons:**
-- More complex setup
-- Additional project maintenance
-- Longer build times
+- Runtime marshaling (slower than LibraryImport)
+- Not AOT-friendly
+- More marshaling overhead
 
 **Best for:**
-- Large SDKs with many types
-- SDKs that will be reused across multiple projects
-- Team/organization-wide distribution
+- Compatibility with older codebases
+- When LibraryImport is not available
 
-### 3. MAUI Community Toolkit Approach
+### 3. Java/Objective-C Bindings (Alternative Approach)
 
-The MAUI Community Toolkit doesn't provide specific binding tools, but it offers useful helpers:
-- Platform-specific dependency injection
-- Feature detection utilities
-- Cross-platform abstractions
+**What it is:** Creating C# wrappers for Java (Android) and Objective-C/Swift (iOS) SDKs.
+
+**Pros:**
+- Works with platform-specific SDKs
+- Can bind existing Java/Swift libraries
+- Good for platform-specific features
+
+**Cons:**
+- Requires separate implementations for each platform
+- More complex with wrapper layers
+- Additional marshaling overhead
+- Two codebases to maintain
+
+**Best for:**
+- When SDK is only available as Java/Objective-C
+- Platform-specific features without C API
+- Existing SDKs without C interface
+
 
 ## Implementation Guides
 
 Detailed step-by-step guides for each platform:
 
 - **[🚀 Quick Start Guide](./native-bindings-quickstart.md)** - Get started in 15 minutes
-- **[Android Native Bindings](./native-bindings-android.md)** - Complete guide for Android SDK integration
-- **[iOS Native Bindings](./native-bindings-ios.md)** - Complete guide for iOS SDK integration
+- **[Android Native Bindings](./native-bindings-android.md)** - Complete guide for Android LibraryImport integration
+- **[iOS Native Bindings](./native-bindings-ios.md)** - Complete guide for iOS LibraryImport integration
 - **[Web-to-Native Bridge](./web-to-native-bridge.md)** - JavaScript bridge implementation details
 - **[Testing and Building](./testing-and-building.md)** - Comprehensive testing and build guide
 
@@ -131,14 +157,31 @@ Detailed step-by-step guides for each platform:
 - .NET 8.0 SDK or later
 - Visual Studio 2022 17.8+ or Visual Studio Code with C# Dev Kit
 - MAUI workloads installed: `dotnet workload install maui`
-- For Android: Android SDK (API 21+)
+- For Android: Android SDK (API 21+) and Android NDK
 - For iOS: Xcode 15+ (macOS only)
+- C/C++ development tools
 
 ### Basic Setup Steps
 
-1. **Create or Identify Your Native SDK**
-   - Obtain the native library files (.jar/.aar for Android, .framework/.xcframework for iOS)
-   - Review the SDK's public API documentation
+1. **Create Your Native C/C++ Library**
+   - Write your native code in C/C++ with exported functions
+   - Use proper export macros (`__declspec(dllexport)` on Windows, `__attribute__((visibility("default")))` on Unix)
+   - Review the example library in `NativeBindings/examplesdk.h/c`
+
+2. **Build Native Libraries**
+   - Android: Use NDK to build `.so` files for each architecture
+   - iOS: Compile directly into app or build `.dylib`/`.a` files
+   - Use provided build scripts: `build-android.sh` and `build-ios.sh`
+
+3. **Create LibraryImport Declarations**
+   - Add P/Invoke declarations in platform-specific C# files
+   - Use `[LibraryImport]` attribute for modern source-generated interop
+   - Handle string marshalling and return types properly
+
+4. **Configure Project**
+   - Android: Add `<AndroidNativeLibrary>` entries for each architecture
+   - iOS: Add `<Compile>` entry for C source or `<NativeReference>` for libraries
+   - Update `.csproj` with proper build configuration
 
 2. **Choose Your Binding Approach**
    - Use Slim Bindings for simple SDKs (demonstrated in this template)
