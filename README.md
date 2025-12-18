@@ -120,23 +120,25 @@ Each document includes:
 
 This template demonstrates how to integrate platform-specific native SDKs (Android/iOS) with your MAUI PWA application using a complete web-to-native bridge.
 
-### Features
+### 🎯 Features
 
 - **MAUI Slim Bindings** - Lightweight approach to bind native SDKs without separate binding projects
 - **Web-to-Native Bridge** - JavaScript interface for PWA to call native SDK APIs
 - **Example Implementations** - Working sample SDKs for both Android and iOS
 - **End-to-End Integration** - Button clicks in PWA trigger native operations
 
-### Documentation
+### 📚 Documentation
 
 Comprehensive guides for native SDK integration:
 
-- **[Overview](docs/native-bindings-overview.md)** - Architecture and binding approaches
-- **[Android Bindings](docs/native-bindings-android.md)** - Step-by-step Android SDK integration
-- **[iOS Bindings](docs/native-bindings-ios.md)** - Step-by-step iOS SDK integration  
-- **[Web-to-Native Bridge](docs/web-to-native-bridge.md)** - JavaScript bridge implementation details
+- **[🚀 Quick Start (15 min)](docs/native-bindings-quickstart.md)** - Get started quickly
+- **[📖 Overview & Architecture](docs/native-bindings-overview.md)** - Understanding the system
+- **[🤖 Android Bindings Guide](docs/native-bindings-android.md)** - Step-by-step Android integration
+- **[🍎 iOS Bindings Guide](docs/native-bindings-ios.md)** - Step-by-step iOS integration  
+- **[🌉 Web-to-Native Bridge](docs/web-to-native-bridge.md)** - JavaScript bridge details
+- **[🧪 Testing & Building](docs/testing-and-building.md)** - Comprehensive testing guide
 
-### Quick Example
+### 💡 Quick Example
 
 In the PWA (JavaScript):
 ```javascript
@@ -151,5 +153,13 @@ const info = await window.nativeBridge.getDeviceInfo();
 ```
 
 The bridge automatically routes these calls to platform-specific implementations in Android (Java) or iOS (Objective-C/Swift).
+
+### 🏗️ Architecture
+
+```
+PWA (JavaScript) → WebView Bridge → MAUI C# → Platform Services → Native SDKs
+```
+
+See the [architecture documentation](docs/native-bindings-overview.md#architecture-overview) for detailed diagrams and flow.
 
 ---

@@ -153,13 +153,19 @@ public partial class MainPage : ContentPage
         try
         {
             var uri = new Uri(url);
-            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            var callbackName = query["callback"];
-            var message = query["message"];
+            var query = uri.Query.TrimStart('?');
+            var parameters = ParseQueryString(query);
+            
+            if (!parameters.TryGetValue("callback", out var callbackName) || 
+                !parameters.TryGetValue("message", out var message))
+            {
+                Console.WriteLine("[MAUI] Invalid native bridge call");
+                return;
+            }
 
             if (string.IsNullOrEmpty(callbackName) || string.IsNullOrEmpty(message))
             {
-                Console.WriteLine("[MAUI] Invalid native bridge call");
+                Console.WriteLine("[MAUI] Invalid native bridge call - empty parameters");
                 return;
             }
 
@@ -181,5 +187,25 @@ public partial class MainPage : ContentPage
         {
             Console.WriteLine($"[MAUI] HandleNativeBridgeCallAsync error: {ex.Message}");
         }
+    }
+
+    private Dictionary<string, string> ParseQueryString(string query)
+    {
+        var result = new Dictionary<string, string>();
+        if (string.IsNullOrEmpty(query))
+            return result;
+
+        var pairs = query.Split('&');
+        foreach (var pair in pairs)
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var key = Uri.UnescapeDataString(parts[0]);
+                var value = Uri.UnescapeDataString(parts[1]);
+                result[key] = value;
+            }
+        }
+        return result;
     }
 }
