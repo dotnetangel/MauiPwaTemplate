@@ -17,7 +17,7 @@ public class NativeBridge
     /// <summary>
     /// Handle incoming messages from JavaScript
     /// </summary>
-    public async Task<string> HandleMessageAsync(string message)
+    public Task<string> HandleMessageAsync(string message)
     {
         try
         {
@@ -27,7 +27,7 @@ public class NativeBridge
                 return CreateErrorResponse("Invalid request format");
             }
 
-            return request.Action switch
+            var result = request.Action switch
             {
                 "initialize" => HandleInitialize(request),
                 "performOperation" => HandlePerformOperation(request),
@@ -35,10 +35,11 @@ public class NativeBridge
                 "isInitialized" => HandleIsInitialized(request),
                 _ => CreateErrorResponse($"Unknown action: {request.Action}")
             };
+            return Task.FromResult(result);
         }
         catch (Exception ex)
         {
-            return CreateErrorResponse($"Error processing message: {ex.Message}");
+            return Task.FromResult(CreateErrorResponse($"Error processing message: {ex.Message}"));
         }
     }
 

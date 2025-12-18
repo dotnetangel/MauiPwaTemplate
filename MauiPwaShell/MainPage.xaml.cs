@@ -6,15 +6,16 @@ namespace MauiPwaShell;
 public partial class MainPage : ContentPage
 {
     private const string PwaUrl = "http://10.0.2.2:5000/";
-    private readonly NativeBridge _nativeBridge;
+    private readonly NativeBridge? _nativeBridge;
 
     public MainPage()
     {
         InitializeComponent();
         
-        // Initialize native services and bridge
-        var nativeService = new NativeService();
-        _nativeBridge = new NativeBridge(nativeService);
+        // Get native bridge from dependency injection if available
+#if ANDROID || IOS
+        _nativeBridge = Application.Current?.Handler?.MauiContext?.Services.GetService<NativeBridge>();
+#endif
         
         PwaView.Navigated += PwaView_Navigated;
         PwaView.Source = PwaUrl;
@@ -69,6 +70,13 @@ public partial class MainPage : ContentPage
 
     private async Task SetupNativeBridgeAsync()
     {
+        // Only setup bridge if native service is available
+        if (_nativeBridge == null)
+        {
+            Console.WriteLine("[MAUI] Native bridge not available on this platform");
+            return;
+        }
+
         try
         {
             var js = @"
@@ -150,6 +158,12 @@ public partial class MainPage : ContentPage
 
     private async Task HandleNativeBridgeCallAsync(string url)
     {
+        if (_nativeBridge == null)
+        {
+            Console.WriteLine("[MAUI] Native bridge not available");
+            return;
+        }
+
         try
         {
             var uri = new Uri(url);

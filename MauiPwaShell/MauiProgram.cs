@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Plugin.Firebase.CloudMessaging;
 using Plugin.Firebase.Core;
+using MauiPwaShell.Services;
 
 namespace MauiPwaShell;
 
@@ -13,6 +14,12 @@ public static class MauiProgram
 
 #if DEBUG
         builder.Logging.AddDebug();
+#endif
+
+        // Register native services for dependency injection
+#if ANDROID || IOS
+        builder.Services.AddSingleton<INativeService, NativeService>();
+        builder.Services.AddSingleton<NativeBridge>();
 #endif
 
         var app = builder.Build();
