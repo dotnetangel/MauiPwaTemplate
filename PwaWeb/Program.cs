@@ -69,6 +69,9 @@ builder.Services.AddResponseCompression(options =>
 // Add health checks
 builder.Services.AddHealthChecks();
 
+// Register RSA key service for JWT signing
+builder.Services.AddSingleton<RsaKeyService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline

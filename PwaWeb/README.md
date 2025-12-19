@@ -3,6 +3,7 @@
 A modern Progressive Web App (PWA) built with ASP.NET Core 8.0 demonstrating:
 - ✅ **Web Push Notifications** using VAPID protocol
 - ✅ **Passkeys (WebAuthn/FIDO2)** for biometric authentication
+- ✅ **JWT Authentication** with OpenID Connect/OAuth 2.0
 - ✅ **Service Worker** with offline support and caching
 - ✅ **Native Integration** ready for MAUI app wrapping
 
@@ -19,6 +20,14 @@ A modern Progressive Web App (PWA) built with ASP.NET Core 8.0 demonstrating:
 - Support for Windows Hello, Face ID, Touch ID, and hardware keys
 - Secure registration and login flows
 - In-memory credential storage (replace with database for production)
+
+### 🔑 JWT Authentication (OpenID Connect)
+- Slim OpenIddict-based JWT token generation
+- RSA256 signing with 2048-bit keys
+- Client credentials grant flow (OAuth 2.0)
+- Custom claims support: `said` and `subscriptionId`
+- Publicly accessible OpenID Connect configuration endpoint
+- No client secret required (development-friendly slim implementation)
 
 ### 📱 Progressive Web App
 - Installable on desktop and mobile devices
@@ -141,6 +150,14 @@ dotnet run --urls "https://localhost:5001"
 - `POST /api/fido/login/options` - Get assertion options
 - `POST /api/fido/login/complete` - Complete authentication
 
+### Authentication (JWT/OpenID Connect)
+
+- `POST /api/auth/token` - Generate JWT access token
+  - **Request**: `grant_type=client_credentials&client_id=<optional>`
+  - **Response**: `{ "access_token": "<jwt>", "token_type": "Bearer", "expires_in": 3600 }`
+- `GET /.well-known/openid-configuration` - OpenID Connect configuration (public)
+- `GET /.well-known/jwks` - JSON Web Key Set
+
 ### Health & Status
 
 - `GET /health` - Application health check
@@ -150,9 +167,11 @@ dotnet run --urls "https://localhost:5001"
 ```
 PwaWeb/
 ├── Controllers/          # API Controllers
+│   ├── AuthController.cs        # JWT token generation
 │   ├── FidoController.cs        # WebAuthn endpoints
 │   ├── RegisterPushController.cs # Push registration
-│   └── WebPushController.cs     # Push sending
+│   ├── WebPushController.cs     # Push sending
+│   └── WellKnownController.cs   # OpenID Connect discovery
 ├── Services/             # Business Logic
 │   ├── WebAuthnService.cs       # FIDO2 logic
 │   └── WebPushService.cs        # Push notification logic
