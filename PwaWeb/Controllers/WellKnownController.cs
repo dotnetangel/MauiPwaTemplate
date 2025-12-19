@@ -41,29 +41,42 @@ public class WellKnownController : ControllerBase
     [HttpGet(".well-known/jwks")]
     public IActionResult GetJwks()
     {
-        // Get the RSA public key parameters
-        var publicKey = _rsaKeyService.GetPublicKey();
-        
-        // Convert RSA parameters to Base64Url encoded strings for JWK format
-        var exponent = Base64UrlEncode(publicKey.Exponent!);
-        var modulus = Base64UrlEncode(publicKey.Modulus!);
-        
-        // Create a JWK (JSON Web Key) with the public key
-        var jwk = new
+        try
         {
-            kty = "RSA",
-            use = "sig",
-            alg = "RS256",
-            n = modulus,
-            e = exponent
-        };
+            // Get the RSA public key parameters
+            var publicKey = _rsaKeyService.GetPublicKey();
+            
+            // Validate that we have the required parameters
+            if (publicKey.Exponent == null || publicKey.Modulus == null)
+            {
+                return StatusCode(500, new { error = "Failed to retrieve RSA public key parameters" });
+            }
+            
+            // Convert RSA parameters to Base64Url encoded strings for JWK format
+            var exponent = Base64UrlEncode(publicKey.Exponent);
+            var modulus = Base64UrlEncode(publicKey.Modulus);
+            
+            // Create a JWK (JSON Web Key) with the public key
+            var jwk = new
+            {
+                kty = "RSA",
+                use = "sig",
+                alg = "RS256",
+                n = modulus,
+                e = exponent
+            };
 
-        var jwks = new
+            var jwks = new
+            {
+                keys = new[] { jwk }
+            };
+
+            return Ok(jwks);
+        }
+        catch (Exception ex)
         {
-            keys = new[] { jwk }
-        };
-
-        return Ok(jwks);
+            return StatusCode(500, new { error = "Failed to generate JWKS", details = ex.Message });
+        }
     }
 
     private static string Base64UrlEncode(byte[] input)

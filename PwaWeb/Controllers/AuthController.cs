@@ -57,7 +57,8 @@ public class AuthController : ControllerBase
                 new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
                 // Add custom claims as requested: "said" and "subscriptionId"
                 // NOTE: In production, these should be derived from actual user/subscription data
-                // For this slim implementation, we generate unique identifiers
+                // For this slim implementation, we generate unique identifiers for each token request
+                // Each token will have different values for these claims
                 new Claim("said", Guid.NewGuid().ToString()),
                 new Claim("subscriptionId", Guid.NewGuid().ToString())
             };

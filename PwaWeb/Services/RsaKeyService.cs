@@ -7,10 +7,11 @@ namespace PwaWeb.Services;
 /// Service for managing RSA keys used for JWT signing.
 /// Maintains a single RSA instance for the application lifetime.
 /// </summary>
-public class RsaKeyService
+public class RsaKeyService : IDisposable
 {
     private readonly RSA _rsa;
     private readonly RsaSecurityKey _signingKey;
+    private bool _disposed;
 
     public RsaKeyService()
     {
@@ -28,5 +29,23 @@ public class RsaKeyService
     public RSAParameters GetPublicKey()
     {
         return _rsa.ExportParameters(false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _rsa?.Dispose();
+            }
+            _disposed = true;
+        }
     }
 }
