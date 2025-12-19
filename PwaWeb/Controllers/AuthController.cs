@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
+using PwaWeb.Services;
 
 namespace PwaWeb.Controllers;
 
@@ -12,20 +12,13 @@ public class AuthController : ControllerBase
 {
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration;
-    private static RSA? _rsa;
-    private static RsaSecurityKey? _signingKey;
+    private readonly RsaKeyService _rsaKeyService;
 
-    public AuthController(ILogger<AuthController> logger, IConfiguration configuration)
+    public AuthController(ILogger<AuthController> logger, IConfiguration configuration, RsaKeyService rsaKeyService)
     {
         _logger = logger;
         _configuration = configuration;
-        
-        // Initialize RSA key for signing (reuse across requests)
-        if (_rsa == null)
-        {
-            _rsa = RSA.Create(2048);
-            _signingKey = new RsaSecurityKey(_rsa);
-        }
+        _rsaKeyService = rsaKeyService;
     }
 
     [HttpPost("token")]
@@ -63,6 +56,8 @@ public class AuthController : ControllerBase
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
                 // Add custom claims as requested: "said" and "subscriptionId"
+                // NOTE: In production, these should be derived from actual user/subscription data
+                // For this slim implementation, we generate unique identifiers
                 new Claim("said", Guid.NewGuid().ToString()),
                 new Claim("subscriptionId", Guid.NewGuid().ToString())
             };
@@ -74,7 +69,7 @@ public class AuthController : ControllerBase
                 Expires = DateTime.UtcNow.AddSeconds(tokenLifetime),
                 Issuer = issuer,
                 Audience = issuer,
-                SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.RsaSha256)
+                SigningCredentials = new SigningCredentials(_rsaKeyService.SigningKey, SecurityAlgorithms.RsaSha256)
             };
 
             // Generate the token

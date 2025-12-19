@@ -181,6 +181,40 @@ Successfully rebuilt the PwaWeb sample Progressive Web Application following .NE
 - `Fido2.AspNet` 4.0.0 - WebAuthn/FIDO2 support
 - `Lib.AspNetCore.WebPush` 2.2.2 - Push notification extensions
 - `Lib.Net.Http.WebPush` 3.3.1 - VAPID protocol implementation
+- `OpenIddict.AspNetCore` 5.8.0 - OpenID Connect/OAuth 2.0 server framework
+- `System.IdentityModel.Tokens.Jwt` 8.0.0 - JWT token creation and validation
+
+### OpenID Connect / JWT Authentication
+The application now includes a slim OpenIddict-based JWT token generation implementation:
+
+**Endpoints**:
+- `POST /api/auth/token` - Creates JWT access tokens with RSA256 signing
+- `GET /.well-known/openid-configuration` - Publicly accessible OpenID Connect configuration
+- `GET /.well-known/jwks` - JSON Web Key Set endpoint
+
+**Features**:
+- RSA 2048-bit key generation for JWT signing
+- Custom claims support: `said` and `subscriptionId`
+- Client credentials grant type (OAuth 2.0)
+- No client secret required (slim implementation for development)
+- Configurable token lifetime (default: 3600 seconds)
+- Standards-compliant JWT tokens with standard claims (sub, iss, aud, exp, iat, jti)
+
+**Configuration** (appsettings.json):
+```json
+{
+  "OpenIddict": {
+    "Issuer": "http://localhost:5000",
+    "TokenLifetime": 3600
+  }
+}
+```
+
+**Security Notes**:
+- Uses ephemeral RSA keys that are regenerated on each application restart
+- For production, implement persistent key storage or use a certificate
+- Consider adding client authentication for production deployments
+- The OpenID configuration endpoint is publicly accessible by design
 
 ## Best Practices Implemented
 

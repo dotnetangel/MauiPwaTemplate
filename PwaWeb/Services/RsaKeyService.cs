@@ -1,0 +1,32 @@
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Cryptography;
+
+namespace PwaWeb.Services;
+
+/// <summary>
+/// Service for managing RSA keys used for JWT signing.
+/// Maintains a single RSA instance for the application lifetime.
+/// </summary>
+public class RsaKeyService
+{
+    private readonly RSA _rsa;
+    private readonly RsaSecurityKey _signingKey;
+
+    public RsaKeyService()
+    {
+        _rsa = RSA.Create(2048);
+        _signingKey = new RsaSecurityKey(_rsa);
+    }
+
+    public RsaSecurityKey SigningKey => _signingKey;
+
+    public RSA Rsa => _rsa;
+
+    /// <summary>
+    /// Gets the RSA parameters for the public key.
+    /// </summary>
+    public RSAParameters GetPublicKey()
+    {
+        return _rsa.ExportParameters(false);
+    }
+}

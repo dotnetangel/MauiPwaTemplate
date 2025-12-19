@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using PwaWeb.Services;
+using System.Security.Cryptography;
 
 namespace PwaWeb.Controllers;
 
@@ -6,10 +8,12 @@ namespace PwaWeb.Controllers;
 public class WellKnownController : ControllerBase
 {
     private readonly IConfiguration _configuration;
+    private readonly RsaKeyService _rsaKeyService;
 
-    public WellKnownController(IConfiguration configuration)
+    public WellKnownController(IConfiguration configuration, RsaKeyService rsaKeyService)
     {
         _configuration = configuration;
+        _rsaKeyService = rsaKeyService;
     }
 
     [HttpGet(".well-known/openid-configuration")]
@@ -37,13 +41,37 @@ public class WellKnownController : ControllerBase
     [HttpGet(".well-known/jwks")]
     public IActionResult GetJwks()
     {
-        // Return empty JWKS for now - clients will validate tokens using the public key from the token itself
-        // In a production scenario, you'd expose the public key here
+        // Get the RSA public key parameters
+        var publicKey = _rsaKeyService.GetPublicKey();
+        
+        // Convert RSA parameters to Base64Url encoded strings for JWK format
+        var exponent = Base64UrlEncode(publicKey.Exponent!);
+        var modulus = Base64UrlEncode(publicKey.Modulus!);
+        
+        // Create a JWK (JSON Web Key) with the public key
+        var jwk = new
+        {
+            kty = "RSA",
+            use = "sig",
+            alg = "RS256",
+            n = modulus,
+            e = exponent
+        };
+
         var jwks = new
         {
-            keys = new object[] { }
+            keys = new[] { jwk }
         };
 
         return Ok(jwks);
+    }
+
+    private static string Base64UrlEncode(byte[] input)
+    {
+        var output = Convert.ToBase64String(input);
+        output = output.Split('=')[0]; // Remove padding
+        output = output.Replace('+', '-'); // Replace + with -
+        output = output.Replace('/', '_'); // Replace / with _
+        return output;
     }
 }

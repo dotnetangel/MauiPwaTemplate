@@ -1,7 +1,5 @@
 using Lib.Net.Http.WebPush;
 using PwaWeb.Services;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +68,9 @@ builder.Services.AddResponseCompression(options =>
 
 // Add health checks
 builder.Services.AddHealthChecks();
+
+// Register RSA key service for JWT signing
+builder.Services.AddSingleton<RsaKeyService>();
 
 var app = builder.Build();
 
