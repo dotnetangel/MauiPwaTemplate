@@ -11,6 +11,16 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
 
+        // Register custom WebView handler for WebAuthn support
+        builder.ConfigureMauiHandlers(handlers =>
+        {
+#if ANDROID
+            handlers.AddHandler<Microsoft.Maui.Controls.WebView, Platforms.Android.CustomWebViewHandler>();
+#elif IOS
+            handlers.AddHandler<Microsoft.Maui.Controls.WebView, Platforms.iOS.CustomWebViewHandler>();
+#endif
+        });
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif

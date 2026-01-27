@@ -3,7 +3,32 @@
 
 A sample .NET 8 solution demonstrating:
 - An ASP.NET Core **PWA** (`PwaWeb`) with **VAPID web push** support (service worker + subscription API).
+- **WebAuthn/Passkey authentication** for passwordless biometric login.
 - A **.NET MAUI** wrapper (`MauiPwaShell`) that hosts the PWA in a `WebView`, registers for native FCM push tokens, sends tokens to the backend, and injects the native token into the PWA when it loads.
+- **Platform-specific WebView configuration** to enable WebAuthn/passkeys in Android and iOS.
+
+---
+
+## Features
+
+### 🔔 Web Push Notifications
+- VAPID-based push notifications for browsers
+- Firebase Cloud Messaging (FCM) for native apps
+- Service worker integration
+- Cross-platform notification support
+
+### 🔐 WebAuthn/Passkeys
+- Biometric authentication (fingerprint, Face ID, Touch ID)
+- FIDO2/WebAuthn standard compliance
+- Platform authenticator support
+- Works in both browser and MAUI WebView
+- **[Full WebAuthn Implementation Guide](WEBAUTHN_IMPLEMENTATION_SUMMARY.md)**
+
+### 📱 MAUI Native Wrapper
+- WebView-based PWA hosting
+- Native push notification integration
+- Platform-specific WebAuthn support
+- Firebase integration for Android/iOS
 
 ---
 
@@ -79,12 +104,61 @@ Use Firebase Console to target the FCM token your MAUI app logs, or use your ser
 
 ---
 
+## WebAuthn/Passkeys Support
+
+This solution includes full WebAuthn/passkey support in both the PWA and the MAUI WebView wrapper.
+
+### Platform Support
+
+| Platform | Support Level | Min Version | Biometric |
+|----------|---------------|-------------|-----------|
+| Android  | ✅ Full       | API 28 (9.0)| Fingerprint/Face |
+| iOS      | ⚠️ Partial    | iOS 14.0    | Touch ID/Face ID |
+| Windows  | ✅ Full       | WebView2    | Windows Hello |
+| Browser  | ✅ Full       | Modern      | Various |
+
+### Key Features
+
+- **Biometric Authentication**: Use fingerprint, Face ID, or Touch ID for passwordless login
+- **Platform Authenticators**: Credentials stored in secure hardware/OS keychain
+- **WebView Support**: Custom handlers enable WebAuthn in MAUI WebView
+- **Feature Detection**: Automatic detection of WebAuthn availability with graceful fallback
+- **Security**: FIDO2 compliant, privacy-preserving, phishing-resistant
+
+### Documentation
+
+- **[WebAuthn Implementation Summary](WEBAUTHN_IMPLEMENTATION_SUMMARY.md)** - Complete implementation overview
+- **[WebAuthn in MAUI WebView Guide](docs/webauthn-passkeys-maui.md)** - Detailed technical guide
+- **[MAUI App README](MauiPwaShell/README.md)** - Platform-specific setup and testing
+
+### Testing WebAuthn
+
+1. Run the PWA: `cd PwaWeb && dotnet run --urls "http://localhost:5000"`
+2. Open in browser or MAUI app
+3. Navigate to "Passkeys" section
+4. Check WebAuthn status (shows platform capabilities)
+5. Click "Register Passkey" and follow biometric prompt
+6. Test "Login with Passkey" to verify authentication
+
+---
+
 ## Notes & Troubleshooting
 
+### General
 - Browsers often require HTTPS for service workers and push. Use `dotnet dev-certs` or ngrok for tunneling.
 - Android emulator uses `10.0.2.2` to reach host `localhost`. Adjust URLs accordingly.
 - For production iOS push, upload your APNs key to Firebase and set `aps-environment` to `production` in entitlements.
 - Securely store the VAPID private key; rotate periodically and protect access.
+
+### WebAuthn/Passkeys
+- **HTTPS Required**: WebAuthn requires secure context (HTTPS or localhost)
+- **Platform Requirements**: Check minimum OS versions for your target platforms
+- **Biometric Setup**: Users must have fingerprint/Face ID/Touch ID configured
+- **Testing**: Always test on physical devices - emulators have limitations
+- **Credentials**: Passkeys are device/platform-specific and don't sync between WebView and browser
+- **Fallback**: Always provide alternative authentication methods (password, OTP, etc.)
+
+See [WebAuthn Troubleshooting Guide](docs/webauthn-passkeys-maui.md#troubleshooting) for detailed solutions.
 
 ---
 
