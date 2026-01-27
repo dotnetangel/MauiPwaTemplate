@@ -28,5 +28,8 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<!-- Privacy - Face ID Usage Description (for WebAuthn biometric authentication) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>We use Face ID to securely authenticate you using passkeys.</string>
 </dict>
 </plist>

@@ -44,6 +44,11 @@
         <h2>🔐 Passkeys (WebAuthn/FIDO2)</h2>
         <p class="info">Use biometric authentication or security keys for passwordless login.</p>
         
+        <!-- WebAuthn Status Display -->
+        <div id="webauthn-status" class="status-section" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+          <div style="color: #666;">Checking WebAuthn availability...</div>
+        </div>
+        
         <!-- Registration -->
         <div class="form-section">
           <h3>Register New Passkey</h3>
@@ -96,6 +101,7 @@
   </div>
 
   <script src="/webauthn.js"></script>
+  <script src="/webauthn-detection.js"></script>
   <script src="/main.js"></script>
 </body>
 

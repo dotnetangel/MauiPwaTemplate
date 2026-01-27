@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
     '/styles.css',
     '/main.js',
     '/webauthn.js',
+    '/webauthn-detection.js',
     '/manifest.json'
 ];
 
