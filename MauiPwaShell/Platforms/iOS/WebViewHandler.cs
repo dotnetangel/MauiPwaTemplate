@@ -33,17 +33,29 @@ public class CustomWebViewHandler : WebViewHandler
         // Note: localhost and file:// are considered secure contexts
 
         // User agent customization for server-side detection
-        webView.EvaluateJavaScriptAsync(
-            @"navigator.userAgent + ' MauiPwaShell/1.0'"
-        ).ContinueWith(task =>
+        // Note: Must be set on main thread after WebView is loaded
+        NSRunLoop.Main.BeginInvokeOnMainThread(async () =>
         {
-            if (task.IsCompletedSuccessfully && task.Result != null)
+            try
             {
-                var userAgent = task.Result.ToString();
-                if (!string.IsNullOrEmpty(userAgent))
+                var userAgentResult = await webView.EvaluateJavaScriptAsync(
+                    @"navigator.userAgent + ' MauiPwaShell/1.0'"
+                );
+                
+                if (userAgentResult != null)
                 {
-                    webView.CustomUserAgent = userAgent;
+                    var userAgent = userAgentResult.ToString();
+                    if (!string.IsNullOrEmpty(userAgent))
+                    {
+                        webView.CustomUserAgent = userAgent;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[iOS WebView] Failed to set custom user agent: {ex.Message}");
+                // Fallback: set a basic custom user agent
+                webView.CustomUserAgent = "MauiPwaShell/1.0";
             }
         });
 
