@@ -1,0 +1,487 @@
+# Native FIDO/Passkey MAUI Sample - Deep Link Pattern
+
+This sample demonstrates a **production-ready pattern** for implementing passkey authentication in a MAUI app that hosts a PWA in a WebView. The key insight is using **system browser for WebAuthn** with **deep linking back to the app** to establish an authenticated session in the WebView.
+
+## 🎯 Why This Pattern?
+
+### The Problem
+- **WebAuthn in WebView** has platform limitations (especially iOS)
+- **Session cookies** need to be in the WebView for the PWA to work
+- Users expect **native biometric login** (Touch ID, Face ID, fingerprint)
+
+### The Solution
+1. **WebView** shows your PWA's login UI
+2. User taps "Login with Passkey"
+3. **MAUI opens system browser** to your domain's WebAuthn endpoint
+4. **System browser** performs the WebAuthn ceremony (full platform support)
+5. **Server** authenticates and redirects to a custom scheme: `mauipwa://auth/return?code=xyz`
+6. **MAUI** receives the deep link, extracts the short-lived `code`
+7. **WebView** navigates to a redeem endpoint that exchanges the code for a session cookie
+8. **PWA** is now authenticated in the WebView!
+
+### Why It Works
+✅ **Best WebAuthn support** - System browser has full platform capabilities  
+✅ **Secure** - Short-lived single-use codes, HTTPS required, state validation  
+✅ **Same domain** - Session cookie works because redeem endpoint is on your PWA domain  
+✅ **Cross-platform** - Works on Android and iOS  
+✅ **Progressive** - Fallback to regular web login if native features unavailable  
+
+---
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MAUI App (WebView)                       │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ PWA: https://yourdomain.com                          │  │
+│  │                                                      │  │
+│  │  [Login with Passkey] ← User clicks                 │  │
+│  │         ↓                                            │  │
+│  │  Calls: window.nativeAuthBridge.startPasskeyLogin() │  │
+│  └──────────────────────────────────────────────────────┘  │
+│         ↓                                                   │
+│  WebView intercepts "native://auth/start-passkey-login"    │
+│         ↓                                                   │
+│  MAUI calls Launcher.OpenAsync()                           │
+└─────────────────────────────────────────────────────────────┘
+                     ↓
+        Opens System Browser
+                     ↓
+┌─────────────────────────────────────────────────────────────┐
+│         System Browser (Safari/Chrome)                      │
+│                                                             │
+│  https://yourdomain.com/auth/webauthn/browser?callback=...  │
+│                                                             │
+│  Server initiates WebAuthn ceremony                         │
+│  User authenticates with biometrics                         │
+│  Server validates credential                                │
+│         ↓                                                   │
+│  Server redirects to:                                       │
+│  mauipwa://auth/return?code=abc123&state=xyz               │
+└─────────────────────────────────────────────────────────────┘
+                     ↓
+        Deep Link to MAUI App
+                     ↓
+┌─────────────────────────────────────────────────────────────┐
+│              MAUI App Receives Deep Link                    │
+│                                                             │
+│  Platform code (MainActivity/AppDelegate) receives URL      │
+│         ↓                                                   │
+│  DeepLinkService parses code and state                     │
+│         ↓                                                   │
+│  WebView navigates to:                                      │
+│  https://yourdomain.com/auth/webauthn/redeem?code=abc123   │
+│                                                             │
+│  Server validates code, creates session, sets cookie       │
+│         ↓                                                   │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ PWA: Authenticated! Session cookie set ✅            │  │
+│  │                                                      │  │
+│  │  User sees authenticated content                     │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔧 Server Endpoints Required
+
+Your backend needs to implement these endpoints on your PWA domain:
+
+### 1. `/auth/webauthn/deeplink/start` (Optional Pre-redirect)
+**Purpose:** Initial endpoint that MAUI opens to set up the flow  
+**Query Params:**
+- `callback` - URL-encoded custom scheme callback URL (e.g., `mauipwa://auth/return`)
+- `state` - CSRF protection token generated by the app
+
+**Response:** Redirect to the browser auth endpoint with the callback and state
+
+```http
+GET /auth/webauthn/deeplink/start?callback=mauipwa%3A%2F%2Fauth%2Freturn&state=abc123
+
+→ 302 Redirect to /auth/webauthn/browser?callback=...&state=...
+```
+
+### 2. `/auth/webauthn/browser` (WebAuthn Ceremony)
+**Purpose:** Perform the actual WebAuthn authentication in the system browser  
+**Query Params:**
+- `callback` - Where to redirect on success
+- `state` - CSRF token to include in callback
+
+**Process:**
+1. Start WebAuthn authentication ceremony
+2. Call `navigator.credentials.get()` with appropriate options
+3. Validate the credential response server-side
+4. Generate a **short-lived, single-use** authorization code
+5. Store code mapping to user session (with expiry, e.g., 60 seconds)
+6. Redirect to callback URL with code and state
+
+```http
+GET /auth/webauthn/browser?callback=mauipwa%3A%2F%2Fauth%2Freturn&state=abc123
+
+→ User authenticates with biometrics
+→ Server validates credential
+→ 302 Redirect to mauipwa://auth/return?code=xyz789&state=abc123
+```
+
+### 3. `/auth/webauthn/redeem` (Code Exchange)
+**Purpose:** Exchange the authorization code for a session cookie  
+**Query Params:**
+- `code` - The short-lived authorization code
+- `state` - The CSRF token (optional, for additional validation)
+
+**Process:**
+1. Validate the code exists and hasn't expired
+2. Validate the state parameter matches (if using)
+3. Mark code as used (prevent replay)
+4. Create authenticated session
+5. Set session cookie (HttpOnly, Secure, SameSite)
+6. Redirect to authenticated area of PWA
+
+```http
+GET /auth/webauthn/redeem?code=xyz789&state=abc123
+
+→ Server validates code
+→ Server creates session and sets cookie
+→ 302 Redirect to / (or user's intended destination)
+```
+
+---
+
+## 🔐 Security Requirements
+
+### ✅ Code Security
+- **Short-lived:** Codes expire in 30-60 seconds
+- **Single-use:** Mark code as consumed immediately upon redemption
+- **Cryptographically random:** Use `System.Security.Cryptography.RandomNumberGenerator`
+- **Sufficient entropy:** At least 128 bits (e.g., 32 random bytes base64-encoded)
+
+### ✅ State Parameter (CSRF Protection)
+- Generate a random state value when starting the flow
+- Store it securely (in-memory or encrypted storage)
+- Validate it matches when redeeming the code
+- Tie it to the specific auth session
+
+### ✅ HTTPS Required
+- All endpoints must be served over HTTPS
+- Only exception: `localhost` for development
+- System browser enforces HTTPS for WebAuthn
+
+### ✅ Cookie Security
+Session cookies set during redemption must have:
+- `HttpOnly` - Prevent JavaScript access
+- `Secure` - HTTPS only
+- `SameSite=Lax` or `Strict` - CSRF protection
+
+**Important:** For MAUI WebView on Android, you may need `SameSite=None` for cross-context cookies. Consider security implications.
+
+### ✅ Additional Mitigations
+- Rate limiting on all endpoints
+- Log authentication attempts
+- Monitor for suspicious patterns
+- Implement user verification during WebAuthn ceremony
+- Require user interaction for passkey access
+
+---
+
+## 📱 Platform-Specific Setup
+
+### Android
+
+#### 1. Intent Filter (Already configured in `MainActivity.cs`)
+```csharp
+[IntentFilter(
+    new[] { Intent.ActionView },
+    Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
+    DataScheme = "mauipwa",
+    DataHost = "auth",
+    DataPathPrefix = "/return")]
+```
+
+#### 2. Receiving Deep Links
+`MainActivity.cs` handles deep links in `OnCreate()` and `OnNewIntent()`.
+
+#### 3. App Links (Optional - for HTTPS URLs)
+Add to `AndroidManifest.xml`:
+```xml
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" android:host="yourdomain.com" android:pathPrefix="/auth/app-callback" />
+</intent-filter>
+```
+
+**Requires:** Digital Asset Links file at `https://yourdomain.com/.well-known/assetlinks.json`
+
+### iOS
+
+#### 1. URL Scheme (Already configured in `Info.plist`)
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>mauipwa</string>
+        </array>
+    </dict>
+</array>
+```
+
+#### 2. Receiving Deep Links
+`AppDelegate.cs` handles URL schemes in `OpenUrl()` method.
+
+#### 3. Universal Links (Optional - for HTTPS URLs)
+Add to `Info.plist`:
+```xml
+<key>com.apple.developer.associated-domains</key>
+<array>
+    <string>applinks:yourdomain.com</string>
+</array>
+```
+
+**Requires:**
+- Associated Domains capability in Apple Developer Portal
+- Apple App Site Association file at `https://yourdomain.com/.well-known/apple-app-site-association`
+- Implementation in `ContinueUserActivity()` method (already in `AppDelegate.cs`)
+
+---
+
+## 🚀 Usage Guide
+
+### For PWA Developers
+
+#### 1. Add Login Button to Your PWA
+```html
+<button id="passkeyLogin">Login with Passkey</button>
+```
+
+#### 2. Check for Native Bridge
+```javascript
+document.getElementById('passkeyLogin').addEventListener('click', () => {
+    if (window.nativeAuthBridge) {
+        // Running in MAUI app - use native bridge
+        window.nativeAuthBridge.startPasskeyLogin();
+    } else {
+        // Running in regular browser - use standard WebAuthn
+        startWebAuthnLogin();
+    }
+});
+```
+
+#### 3. Server-Side Implementation
+See the [Server Endpoints](#-server-endpoints-required) section above for endpoint specifications.
+
+### For MAUI Developers
+
+#### 1. Configure Your Domain
+Update `DeepLinkService.cs`:
+```csharp
+private const string PwaDomain = "https://yourdomain.com";
+```
+
+Update `MainPage.xaml.cs`:
+```csharp
+private const string PwaUrl = "https://yourdomain.com/";
+```
+
+#### 2. Test Deep Links
+**Android:**
+```bash
+adb shell am start -W -a android.intent.action.VIEW -d "mauipwa://auth/return?code=test123&state=abc"
+```
+
+**iOS:**
+```bash
+xcrun simctl openurl booted "mauipwa://auth/return?code=test123&state=abc"
+```
+
+#### 3. Build and Deploy
+```bash
+dotnet build -f net8.0-android
+dotnet build -f net8.0-ios
+```
+
+---
+
+## 🔄 Alternative Approaches
+
+### 1. Custom Scheme Only (This Sample)
+**Pros:** Simple, works everywhere, no server configuration  
+**Cons:** Less seamless, shows "Open in app?" prompt
+
+### 2. Universal/App Links
+**Pros:** Seamless, no prompt, more professional  
+**Cons:** Requires server setup, domain verification, Apple Developer account
+
+### 3. Hybrid Approach (Recommended for Production)
+Use custom scheme as fallback, universal links as primary:
+```csharp
+// Server redirects to universal link first
+https://yourdomain.com/auth/app-callback?code=xyz
+
+// Falls back to custom scheme if universal link fails
+mauipwa://auth/return?code=xyz
+```
+
+---
+
+## 🧪 Testing
+
+### Manual Testing Flow
+
+1. **Run the app** on a device or emulator
+2. **Navigate to login page** in WebView
+3. **Click "Login with Passkey"** 
+4. **Observe:**
+   - System browser opens
+   - You're prompted for biometric authentication
+   - Browser redirects to `mauipwa://auth/return?code=...`
+   - App comes to foreground
+   - WebView navigates to redeem endpoint
+   - User is logged in
+
+### Debug Logging
+
+The sample includes extensive logging. Watch the console for:
+- `[MAUI]` - Main app flow
+- `[Android]` / `[iOS]` - Platform-specific handling
+- `[Android WebView]` / `[iOS WebView]` - WebView interception
+
+### Common Issues
+
+**Issue:** Deep link doesn't open the app  
+**Fix:** Verify intent filter/URL scheme is correct, app is installed
+
+**Issue:** WebView shows error after redeem  
+**Fix:** Check server endpoint returns proper cookie and redirects
+
+**Issue:** System browser doesn't redirect back  
+**Fix:** Verify server redirect URL matches custom scheme exactly
+
+**Issue:** Code validation fails  
+**Fix:** Ensure code hasn't expired, check server logs
+
+---
+
+## 🛠️ Customization
+
+### Change Custom Scheme
+1. Update `DeepLinkService.cs`: `CustomScheme = "myapp"`
+2. Update Android `MainActivity.cs`: `DataScheme = "myapp"`
+3. Update iOS `Info.plist`: `<string>myapp</string>`
+
+### Change Endpoint Paths
+Update `DeepLinkService.cs`:
+```csharp
+private const string AuthStartPath = "/your/custom/path";
+private const string RedeemPath = "/your/redeem/path";
+```
+
+### Add State Validation
+Enhance `DeepLinkService.cs` to store and verify state:
+```csharp
+private string? _pendingState;
+
+public string BuildAuthStartUrl()
+{
+    var state = GenerateState();
+    _pendingState = state; // Store for validation
+    // ... rest of method
+}
+
+public AuthCallbackResult ParseAuthCallback(string url)
+{
+    // ... parsing code
+    if (state != _pendingState) {
+        return new AuthCallbackResult { IsValid = false, Error = "State mismatch" };
+    }
+    // ... rest of method
+}
+```
+
+---
+
+## 📚 Integration with Existing PWA
+
+### Step-by-Step Integration
+
+#### 1. Update Your PWA
+Add the native bridge detection and login trigger to your PWA's authentication code.
+
+#### 2. Implement Server Endpoints
+Add the three endpoints described in [Server Endpoints Required](#-server-endpoints-required).
+
+#### 3. Configure MAUI App
+- Update domain in `DeepLinkService.cs` and `MainPage.xaml.cs`
+- Ensure custom scheme or universal links are set up
+- Test deep link handling
+
+#### 4. Deploy and Test
+- Deploy server changes
+- Build and install MAUI app
+- Test the full authentication flow
+
+### Fallback Strategy
+
+Always provide alternative authentication:
+```javascript
+if (window.nativeAuthBridge) {
+    // MAUI app - use deep link pattern
+    window.nativeAuthBridge.startPasskeyLogin();
+} else if (window.PublicKeyCredential) {
+    // Browser - use WebAuthn directly
+    navigator.credentials.get({...});
+} else {
+    // Fallback - password or other method
+    showPasswordLogin();
+}
+```
+
+---
+
+## 🔒 Security Best Practices Summary
+
+1. ✅ Use HTTPS for all endpoints (except localhost dev)
+2. ✅ Short-lived codes (30-60 seconds max)
+3. ✅ Single-use codes (consume immediately)
+4. ✅ Validate state parameter (CSRF protection)
+5. ✅ Secure session cookies (HttpOnly, Secure, SameSite)
+6. ✅ Rate limiting on authentication endpoints
+7. ✅ User verification in WebAuthn ceremony
+8. ✅ Monitor and log authentication attempts
+9. ✅ Keep credentials in device keychain (WebAuthn standard)
+10. ✅ Never expose secrets in client code
+
+---
+
+## 📖 Additional Resources
+
+- **[WebAuthn Guide](https://webauthn.guide/)** - WebAuthn specification and examples
+- **[FIDO Alliance](https://fidoalliance.org/)** - Passkey standards and best practices
+- **[MAUI Deep Linking](https://learn.microsoft.com/en-us/dotnet/maui/platform-integration/applinks)** - Official MAUI documentation
+- **[Android App Links](https://developer.android.com/training/app-links)** - Android universal links
+- **[iOS Universal Links](https://developer.apple.com/ios/universal-links/)** - Apple universal links
+
+---
+
+## 📝 License
+
+This sample is provided as-is for demonstration purposes. Adapt and use according to your needs.
+
+---
+
+## 💡 Tips
+
+- **Development:** Use custom schemes for faster iteration
+- **Production:** Implement universal/app links for better UX
+- **Testing:** Test on real devices - biometrics don't work well in emulators
+- **Security:** Have your implementation reviewed by security experts
+- **Monitoring:** Log all authentication flows for debugging and security auditing
+
+---
+
+**Questions?** This is a minimal reference implementation. Customize it for your specific requirements and security policies.
